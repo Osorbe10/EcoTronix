@@ -34,10 +34,8 @@ Once the installation is finished, it is recommended to enter the settings to co
 To enter the settings just type the following command in the terminal:
 
 ```bash
-./config.py
+sudo ./config.py
 ```
-
-In case you have an OS without GUI, just add the `--no-gui` argument.
 
 Once configured, to start the application type the following command in the terminal:
 
