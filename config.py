@@ -10,7 +10,7 @@ from os import getuid, path, remove
 from pocketsphinx import get_model_path
 from re import compile, findall, sub
 from time import gmtime, strptime
-from tkinter import Button, END, Entry, Frame, Label, LabelFrame, LEFT, Listbox, OptionMenu, StringVar, Text, Tk, TOP
+from tkinter import BooleanVar, Button, Checkbutton, END, Entry, Frame, Label, LabelFrame, LEFT, Listbox, OptionMenu, StringVar, Text, Tk, TOP
 
 CONFIG_FILE = "config.json"
 CONFIG_PATH = "./"
@@ -118,7 +118,7 @@ def create_user(name, birth_date, language):
         for user in config["users"]:
             if name.strip() == user["name"]:
                 print(
-                    f"{YELLOW}[{DEFAULT}*{YELLOW}]{DEFAULT} {BLUE}Existing user")
+                    f"{YELLOW}[{DEFAULT}*{YELLOW}]{DEFAULT} {BLUE}Existing user{DEFAULT}")
                 return False
         timestamp = set_face()
         if not timestamp:
@@ -137,7 +137,7 @@ def create_user(name, birth_date, language):
             {"name": name.strip(), "birth_date": birth_date.strip(), "language": language, "face": timestamp})
         config_file.seek(0)
         dump(config, config_file, indent=4)
-    print(f"{GREEN}[{DEFAULT}+{GREEN}]{DEFAULT} {BLUE}User created")
+    print(f"{GREEN}[{DEFAULT}+{GREEN}]{DEFAULT} {BLUE}User created{DEFAULT}")
     return True
 
 
@@ -174,6 +174,146 @@ def remove_user(name):
     print(
         f"{YELLOW}[{DEFAULT}*{YELLOW}]{DEFAULT} {BLUE}Non existing user{DEFAULT}")
     return False
+
+
+"""
+Checks role format.
+@param role: Role
+@returns: True if role has correct format. False if not or role is empty
+"""
+
+
+def role_format(role):
+    if not role or role.isspace():
+        print(
+            f"{RED}[{DEFAULT}-{RED}]{DEFAULT} {BLUE}Role cannot be empty{DEFAULT}")
+        return False
+    if not all(char.isalpha() or char.isspace() for char in role):
+        print(
+            f"{RED}[{DEFAULT}-{RED}]{DEFAULT} {BLUE}Role must have only letters and spaces{DEFAULT}")
+        return False
+    return True
+
+
+"""
+Creates a new role.
+@param role: Role
+@param age_restriction: Age restriction
+@returns: True if the role was created. False if parameter are incomplete or incorrect or role is existing
+"""
+
+
+def create_role(role, age_restriction):
+    if not role_format(role):
+        return False
+    with open(CONFIG_PATH + CONFIG_FILE, "r+") as config_file:
+        config = load(config_file)
+        for _role in config["roles"]:
+            if role.strip() == _role["role"]:
+                print(
+                    f"{YELLOW}[{DEFAULT}*{YELLOW}]{DEFAULT} {BLUE}Existing role{DEFAULT}")
+                return False
+        config["roles"].append(
+            {"role": role.strip(), "age_restriction": age_restriction, "users": []})
+        config_file.seek(0)
+        dump(config, config_file, indent=4)
+    print(f"{GREEN}[{DEFAULT}+{GREEN}]{DEFAULT} {BLUE}Role created{DEFAULT}")
+    return True
+
+
+"""
+Removes a role.
+@param role: Role
+@returns: True if the role was removed. False if parameter is incomplete or incorrect or role is not existing
+"""
+
+
+def remove_role(role):
+    if not role_format(role):
+        return False
+    with open(CONFIG_PATH + CONFIG_FILE, "r+") as config_file:
+        config = load(config_file)
+        for _role in config["roles"]:
+            if role.strip() == _role["role"]:
+                config["roles"].remove(_role)
+                config_file.seek(0)
+                dump(config, config_file, indent=4)
+                config_file.truncate()
+                print(
+                    f"{GREEN}[{DEFAULT}+{GREEN}]{DEFAULT} {BLUE}Role removed{DEFAULT}")
+                return True
+    print(
+        f"{YELLOW}[{DEFAULT}*{YELLOW}]{DEFAULT} {BLUE}Non existing role{DEFAULT}")
+    return False
+
+
+"""
+Assigns a role to a user.
+@param role: Role
+@param user: User
+@returns: True if the role was assigned. False if user is already assigned to this role
+"""
+
+
+def assign_role(role, user):
+    if not role:
+        print(
+            f"{RED}[{DEFAULT}-{RED}]{DEFAULT} {BLUE}Role cannot be empty{DEFAULT}")
+        return False
+    if not user:
+        print(
+            f"{RED}[{DEFAULT}-{RED}]{DEFAULT} {BLUE}User cannot be empty{DEFAULT}")
+        return False
+    with open(CONFIG_PATH + CONFIG_FILE, "r+") as config_file:
+        config = load(config_file)
+        for _role in config["roles"]:
+            if role == _role["role"]:
+                if user in _role["users"]:
+                    print(
+                        f"{YELLOW}[{DEFAULT}*{YELLOW}]{DEFAULT} {BLUE}User already assigned to this role{DEFAULT}")
+                    return False
+                else:
+                    _role["users"].append(user)
+                    config_file.seek(0)
+                    dump(config, config_file, indent=4)
+                    print(
+                        f"{GREEN}[{DEFAULT}+{GREEN}]{DEFAULT} {BLUE}User assigned{DEFAULT}")
+                    return True
+
+
+"""
+Deassigns a role from a user.
+@param role: Role
+@param user: User
+@returns: True if the role was deassigned.
+"""
+
+
+def deassign_role(role, user):
+    if not role:
+        print(
+            f"{RED}[{DEFAULT}-{RED}]{DEFAULT} {BLUE}Role cannot be empty{DEFAULT}")
+        return False
+    if not user:
+        print(
+            f"{RED}[{DEFAULT}-{RED}]{DEFAULT} {BLUE}User cannot be empty{DEFAULT}")
+        return False
+    with open(CONFIG_PATH + CONFIG_FILE, "r+") as config_file:
+        config = load(config_file)
+        for _role in config["roles"]:
+            if role == _role["role"]:
+                if user not in _role["users"]:
+                    print(
+                        f"{YELLOW}[{DEFAULT}*{YELLOW}]{DEFAULT} {BLUE}User not assigned to this role{DEFAULT}")
+                    return False
+                else:
+                    _role["users"].remove(user)
+                    config_file.seek(0)
+                    dump(config, config_file, indent=4)
+                    config_file.truncate()
+                    print(
+                        f"{GREEN}[{DEFAULT}+{GREEN}]{DEFAULT} {BLUE}User deassigned{DEFAULT}")
+                    return True
 
 
 """
@@ -225,7 +365,7 @@ def create_command(command, description):
                     f"{YELLOW}[{DEFAULT}*{YELLOW}]{DEFAULT} {BLUE}Existing command{DEFAULT}")
                 return False
         config["commands"].append(
-            {"command": command.strip(), "description": description.strip()})
+            {"command": command.strip(), "description": description.strip(), "roles": []})
         config_file.seek(0)
         dump(config, config_file, indent=4)
     print(f"{GREEN}[{DEFAULT}+{GREEN}]{DEFAULT} {BLUE}Command created{DEFAULT}")
@@ -259,6 +399,75 @@ def remove_command(command):
 
 
 """
+Assigns a role to a command.
+@param command: Command
+@param role: Role
+@returns: True if the role was assigned. False if role is already assigned to this command
+"""
+
+
+def assign_command(command, role):
+    if not command:
+        print(
+            f"{RED}[{DEFAULT}-{RED}]{DEFAULT} {BLUE}Command cannot be empty{DEFAULT}")
+        return False
+    if not role:
+        print(
+            f"{RED}[{DEFAULT}-{RED}]{DEFAULT} {BLUE}Role cannot be empty{DEFAULT}")
+        return False
+    with open(CONFIG_PATH + CONFIG_FILE, "r+") as config_file:
+        config = load(config_file)
+        for _command in config["commands"]:
+            if command == _command["command"]:
+                if role in _command["roles"]:
+                    print(
+                        f"{YELLOW}[{DEFAULT}*{YELLOW}]{DEFAULT} {BLUE}Role already assigned to this command{DEFAULT}")
+                    return False
+                else:
+                    _command["roles"].append(role)
+                    config_file.seek(0)
+                    dump(config, config_file, indent=4)
+                    print(
+                        f"{GREEN}[{DEFAULT}+{GREEN}]{DEFAULT} {BLUE}Role assigned{DEFAULT}")
+                    return True
+
+
+"""
+Deassigns a role from a command.
+@param command: Command
+@param role: Role
+@returns: True if the role was deassigned. False if role is not assigned to this command
+"""
+
+
+def deassign_command(command, role):
+    if not command:
+        print(
+            f"{RED}[{DEFAULT}-{RED}]{DEFAULT} {BLUE}Command cannot be empty{DEFAULT}")
+        return False
+    if not role:
+        print(
+            f"{RED}[{DEFAULT}-{RED}]{DEFAULT} {BLUE}Role cannot be empty{DEFAULT}")
+        return False
+    with open(CONFIG_PATH + CONFIG_FILE, "r+") as config_file:
+        config = load(config_file)
+        for _command in config["commands"]:
+            if command == _command["command"]:
+                if role not in _command["roles"]:
+                    print(
+                        f"{YELLOW}[{DEFAULT}*{YELLOW}]{DEFAULT} {BLUE}Role not assigned to this command{DEFAULT}")
+                    return False
+                else:
+                    _command["roles"].remove(role)
+                    config_file.seek(0)
+                    dump(config, config_file, indent=4)
+                    config_file.truncate()
+                    print(
+                        f"{GREEN}[{DEFAULT}+{GREEN}]{DEFAULT} {BLUE}Role deassigned{DEFAULT}")
+                    return True
+
+
+"""
 Cheecks response format.
 @param response: Response
 @returns: True if response has correct format. False if not or response is empty
@@ -286,7 +495,6 @@ Checks phrases format.
 
 def phrases_format(phrases):
     for phrase in compile(r"[\n\r]+").split(phrases.strip()):
-        print(phrase)
         if not phrase or phrase.isspace():
             print(
                 f"{RED}[{DEFAULT}-{RED}]{DEFAULT} {BLUE}Phrases cannot be empty{DEFAULT}")
@@ -377,6 +585,9 @@ def create_phrase(language, command, response, phrases):
                 new_phrase = {"command": command,
                               "response": response.strip().lower(), "phrases": []}
                 for phrase in compile(r"[\n\r]+").split(phrases.strip().lower()):
+
+                    # TODO: Check if every word exists in dictionary file
+
                     threshold = get_threshold(phrase)
                     if not threshold:
                         return False
@@ -411,6 +622,8 @@ Removes a phrase.
 
 
 def remove_phrase(language, command):
+    if not command_format(command):
+        return False
     with open(CONFIG_PATH + CONFIG_FILE, "r+") as config_file:
         config = load(config_file)
         for _language in config["languages"]:
@@ -473,6 +686,36 @@ def get_users():
 
 
 """
+Returns existing roles.
+@returns: A list with existing roles or an array with an empty string if there are no roles
+"""
+
+
+def get_roles():
+    with open(CONFIG_PATH + CONFIG_FILE, "r") as config_file:
+        config = load(config_file)
+        if len(config["roles"]) == 0:
+            return [""]
+        return [{"role": role["role"], "age_restriction": role["age_restriction"]} for role in config["roles"]]
+
+
+"""
+Returns roles and their assigned users.
+@returns: A list with roles and a list with its assigned users
+"""
+
+
+def get_roles_users():
+    roles, users = [], []
+    with open(CONFIG_PATH + CONFIG_FILE, "r") as config_file:
+        config = load(config_file)
+        for role in config["roles"]:
+            roles.append(role["role"])
+            users.append(role["users"])
+    return roles, users
+
+
+"""
 Returns existing commands.
 @returns: A list with existing commands or an array with an empty string if there are no commands
 """
@@ -487,6 +730,22 @@ def get_commands():
 
 
 """
+Returns commands and their assigned roles.
+@returns: A list with commands and a list with its assigned roles
+"""
+
+
+def get_commands_roles():
+    commands, roles = [], []
+    with open(CONFIG_PATH + CONFIG_FILE, "r") as config_file:
+        config = load(config_file)
+        for command in config["commands"]:
+            commands.append(command["command"])
+            roles.append(command["roles"])
+    return commands, roles
+
+
+"""
 Creates a new user in graphical mode.
 """
 
@@ -496,6 +755,7 @@ def gui_create_user():
     birth_date = users_birth_date_entry.get()
     language = users_language_entry.get()
     create_user(name, birth_date, language)
+    gui_update_roles_user_menu()
     gui_update_user_list()
 
 
@@ -507,6 +767,7 @@ Removes a user in graphical mode.
 def gui_remove_user():
     name = users_name_entry.get()
     remove_user(name)
+    gui_update_roles_user_menu()
     gui_update_user_list()
 
 
@@ -530,6 +791,135 @@ def gui_update_user_list():
 
 
 """
+Update roles's user menu in graphical mode.
+"""
+
+
+def gui_update_roles_user_menu():
+    roles_users_user_menu["menu"].delete(0, END)
+    users = get_users()
+    if users[0]:
+        for user in users:
+            roles_users_user_menu["menu"].add_command(label=user["name"] + " [ " + str(user["age"]) + " years ] [ " +
+                                                      user["language"] + " ]", command=lambda value=user["name"]: roles_users_user_entry.set(value))
+        roles_users_user_entry.set(users[0]["name"])
+    else:
+        roles_users_user_menu["menu"].add_command(
+            label=users[0], command=lambda value=users[0]: roles_users_user_entry.set(value))
+        roles_users_user_entry.set(users[0])
+
+
+"""
+Creates a new role in graphical mode.
+"""
+
+
+def gui_create_role():
+    role = roles_role_entry.get()
+    age_restriction = roles_age_restriction_entry.get()
+    create_role(role, age_restriction)
+    gui_update_roles_role_menu()
+    gui_update_commands_role_menu()
+    gui_update_role_list()
+    gui_update_role_user_list()
+
+
+"""
+Removes a role in graphical mode.
+"""
+
+
+def gui_remove_role():
+    role = roles_role_entry.get()
+    remove_role(role)
+    gui_update_roles_role_menu()
+    gui_update_commands_role_menu()
+    gui_update_role_list()
+    gui_update_role_user_list()
+
+
+"""
+Update role's list in graphical mode.
+"""
+
+
+def gui_update_role_list():
+    roles = get_roles()
+    roles_list.delete(0, END)
+    if not roles[0]:
+        roles_list.insert(END, "Non existing roles...")
+    else:
+        for role in roles:
+            roles_list.insert(
+                END, role["role"] + " [ age restriction: " + str(role["age_restriction"]) + " ]")
+    roles_list.config(width=max([len(role)
+                      for role in roles_list.get(0, END)]))
+    roles_list.config(height=roles_list.size())
+
+
+"""
+Update roles's assigned users in graphical mode.
+"""
+
+
+def gui_update_role_user_list():
+    roles, users = get_roles_users()
+    roles_users_list.delete(0, END)
+    if not roles:
+        roles_users_list.insert(END, "Non existing roles...")
+    else:
+        for i in range(len(roles)):
+            roles_users_list.insert(
+                END, roles[i] + " [ " + ", ".join(users[i]) + " ]")
+    roles_users_list.config(width=max([len(assignation)
+                                       for assignation in roles_users_list.get(0, END)]))
+    roles_users_list.config(height=roles_users_list.size())
+
+
+"""
+Update roles's role menu in graphical mode.
+"""
+
+
+def gui_update_roles_role_menu():
+    roles_users_role_menu["menu"].delete(0, END)
+    roles = get_roles()
+    if roles[0]:
+        for role in roles:
+            roles_users_role_menu["menu"].add_command(label=role["role"] + " [ age restriction: " + str(
+                role["age_restriction"]) + " ]", command=lambda value=role["role"]: roles_users_role_entry.set(value))
+        roles_users_role_entry.set(roles[0]["role"])
+    else:
+        roles_users_role_menu["menu"].add_command(
+            label=roles[0], command=lambda value=roles[0]: roles_users_role_entry.set(value))
+        roles_users_role_entry.set(roles[0])
+
+
+"""
+Assign a role to a user in graphical mode.
+"""
+
+
+def gui_assign_role():
+    role = roles_users_role_entry.get()
+    user = roles_users_user_entry.get()
+    assign_role(role, user)
+    gui_update_role_user_list()
+
+
+"""
+Deassign a role to a user in graphical mode.
+"""
+
+
+def gui_deassign_role():
+    role = roles_users_role_entry.get()
+    user = roles_users_user_entry.get()
+    deassign_role(role, user)
+    gui_update_role_user_list()
+
+
+"""
 Creates a new command in graphical mode.
 """
 
@@ -539,6 +929,8 @@ def gui_create_command():
     description = commands_description_entry.get()
     create_command(command, description)
     gui_update_command_list()
+    gui_update_command_role_list()
+    gui_update_commands_command_menu()
     gui_update_phrases_command_menu()
 
 
@@ -551,6 +943,8 @@ def gui_remove_command():
     command = commands_command_entry.get()
     remove_command(command)
     gui_update_command_list()
+    gui_update_command_role_list()
+    gui_update_commands_command_menu()
     gui_update_phrases_command_menu()
 
 
@@ -574,26 +968,103 @@ def gui_update_command_list():
 
 
 """
+Update commands's assigned roles in graphical mode.
+"""
+
+
+def gui_update_command_role_list():
+    commands, roles = get_commands_roles()
+    commands_roles_list.delete(0, END)
+    if not commands:
+        commands_roles_list.insert(END, "Non existing commands...")
+    else:
+        for i in range(len(roles)):
+            commands_roles_list.insert(
+                END, commands[i] + " [ " + ", ".join(roles[i]) + " ]")
+    commands_roles_list.config(width=max([len(assignation)
+                                          for assignation in commands_roles_list.get(0, END)]))
+    commands_roles_list.config(height=commands_roles_list.size())
+
+
+"""
+Update commands's command menu in graphical mode.
+"""
+
+
+def gui_update_commands_command_menu():
+    commands_roles_command_menu["menu"].delete(0, END)
+    commands = get_commands()
+    if commands[0]:
+        for command in commands:
+            commands_roles_command_menu["menu"].add_command(
+                label=command["description"], command=lambda value=command["command"]: commands_roles_command_entry.set(value))
+        commands_roles_command_entry.set(commands[0]["command"])
+    else:
+        commands_roles_command_menu["menu"].add_command(
+            label=commands[0], command=lambda value=commands[0]: commands_roles_command_entry.set(value))
+        commands_roles_command_entry.set(commands[0])
+
+
+"""
+Update commands's role menu in graphical mode.
+"""
+
+
+def gui_update_commands_role_menu():
+    commands_roles_role_menu["menu"].delete(0, END)
+    roles = get_roles()
+    if roles[0]:
+        for role in roles:
+            commands_roles_role_menu["menu"].add_command(label=role["role"] + " [ age restriction: " + str(
+                role["age_restriction"]) + " ]", command=lambda value=role["role"]: commands_roles_role_entry.set(value))
+        commands_roles_role_entry.set(roles[0]["role"])
+    else:
+        commands_roles_role_menu["menu"].add_command(
+            label=roles[0], command=lambda value=roles[0]: commands_roles_role_entry.set(value))
+        commands_roles_role_entry.set(roles[0])
+
+
+"""
 Update phrases's command menu in graphical mode.
 """
 
 
 def gui_update_phrases_command_menu():
-    global commands_command, commands_description
+    phrases_command_menu["menu"].delete(0, END)
     commands = get_commands()
-    commands_command, commands_description = [], []
     if commands[0]:
         for command in commands:
-            commands_command.append(command["command"])
-            commands_description.append(command["description"])
+            phrases_command_menu["menu"].add_command(
+                label=command["description"], command=lambda value=command["command"]: phrases_command_entry.set(value))
+        phrases_command_entry.set(commands[0]["command"])
     else:
-        commands_command.append(commands[0])
-        commands_description.append(commands[0])
-    phrases_command_menu["menu"].delete(0, END)
-    for index in range(len(commands_command)):
         phrases_command_menu["menu"].add_command(
-            label=commands_description[index], command=lambda value=commands_command[index]: phrases_command_entry.set(value))
-    phrases_command_entry.set(commands_command[0])
+            label=commands[0], command=lambda value=commands[0]: phrases_command_entry.set(value))
+        phrases_command_entry.set(commands[0])
+
+
+"""
+Assign a command to a role in graphical mode.
+"""
+
+
+def gui_assign_command():
+    command = commands_roles_command_entry.get()
+    role = commands_roles_role_entry.get()
+    assign_command(command, role)
+    gui_update_command_role_list()
+
+
+"""
+Deassign a command to a role in graphical mode.
+"""
+
+
+def gui_deassign_command():
+    command = commands_roles_command_entry.get()
+    role = commands_roles_role_entry.get()
+    deassign_command(command, role)
+    gui_update_command_role_list()
 
 
 """
@@ -620,101 +1091,163 @@ def gui_remove_phrase():
     remove_phrase(language, command)
 
 
-"""
-Main function.
-"""
-
-if getuid() != 0:
-    print(f"{RED}[{DEFAULT}-{RED}]{DEFAULT} {BLUE}Run it as root{DEFAULT}")
-    exit()
-languages_language = get_languages_language()
-if not languages_language:
-    print(f"{RED}[{DEFAULT}-{RED}]{DEFAULT} {BLUE}No languages found{DEFAULT}")
-    exit()
-print(
-    f"{YELLOW}[{DEFAULT}*{YELLOW}]{DEFAULT} {BLUE}Starting settings...{DEFAULT}")
-try:
-    root = Tk()
-    root.title("Settings")
-    users_frame = LabelFrame(root, text="Users", padx=5, pady=5)
-    users_frame.pack(side=TOP, padx=10, pady=10)
-    users_name_label = Label(users_frame, text="Name")
-    users_name_label.pack(side=LEFT, padx=10)
-    users_name_entry = Entry(users_frame)
-    users_name_entry.pack(side=LEFT, padx=10)
-    users_birth_date_label = Label(
-        users_frame, text="Birth Date")
-    users_birth_date_label.pack(side=LEFT, padx=10)
-    users_birth_date_entry = Entry(users_frame)
-    users_birth_date_entry.pack(side=LEFT, padx=10)
-    users_language_entry = StringVar(root)
-    users_language_entry.set(languages_language[0])
-    users_language_menu = OptionMenu(
-        users_frame, users_language_entry, *languages_language)
-    users_language_menu.pack(side=LEFT, padx=10)
-    users_create_button = Button(
-        users_frame, text="Create", command=gui_create_user)
-    users_create_button.pack(side=LEFT, padx=10)
-    user_remove_button = Button(
-        users_frame, text="Remove", command=gui_remove_user)
-    user_remove_button.pack(side=LEFT, padx=10)
-    users_list = Listbox(users_frame)
-    users_list.pack(side=LEFT, padx=10)
-    gui_update_user_list()
-    commands_frame = LabelFrame(root, text="Commands", padx=5, pady=5)
-    commands_frame.pack(side=TOP, padx=10, pady=10)
-    commands_command_label = Label(
-        commands_frame, text="Command")
-    commands_command_label.pack(side=LEFT, padx=10)
-    commands_command_entry = Entry(commands_frame)
-    commands_command_entry.pack(side=LEFT, padx=10)
-    commands_description_label = Label(
-        commands_frame, text="Description")
-    commands_description_label.pack(side=LEFT, padx=10)
-    commands_description_entry = Entry(commands_frame)
-    commands_description_entry.pack(side=LEFT, padx=10)
-    commands_create_button = Button(
-        commands_frame, text="Create", command=gui_create_command)
-    commands_create_button.pack(side=LEFT, padx=10)
-    commands_remove_button = Button(
-        commands_frame, text="Remove", command=gui_remove_command)
-    commands_remove_button.pack(side=LEFT, padx=10)
-    commands_list = Listbox(commands_frame)
-    commands_list.pack(side=LEFT, padx=10)
-    gui_update_command_list()
-    phrases_frame = LabelFrame(root, text="Phrases", padx=5, pady=5)
-    phrases_frame.pack(side=TOP, padx=10, pady=10)
-    phrases_1_frame = Frame(phrases_frame)
-    phrases_1_frame.pack(side=TOP, pady=10)
-    phrases_language_entry = StringVar(root)
-    phrases_language_entry.set(languages_language[0])
-    phrases_language_menu = OptionMenu(
-        phrases_1_frame, phrases_language_entry, *languages_language)
-    phrases_language_menu.pack(side=LEFT, padx=10)
-    phrases_command_entry = StringVar(root)
-    phrases_command_menu = OptionMenu(
-        phrases_1_frame, phrases_command_entry, "")
-    phrases_command_menu.pack(side=LEFT, padx=10)
-    commands_command, commands_description = [], []
-    gui_update_phrases_command_menu()
-    phrases_response_label = Label(
-        phrases_1_frame, text="Response")
-    phrases_response_label.pack(side=LEFT, padx=10)
-    phrases_response_entry = Entry(phrases_1_frame)
-    phrases_response_entry.pack(side=LEFT, padx=10)
-    phrases_2_frame = Frame(phrases_frame)
-    phrases_2_frame.pack(side=TOP, pady=10)
-    phrases_phrases_label = Label(
-        phrases_2_frame, text="Phrases")
-    phrases_phrases_label.pack(side=LEFT, padx=10)
-    phrases_phrases_text = Text(phrases_2_frame)
-    phrases_phrases_text.pack(side=LEFT, padx=10)
-    phrases_create_button = Button(
-        phrases_2_frame, text="Create", command=gui_create_phrase)
-    phrases_create_button.pack(side=LEFT, padx=10)
-    phrases_remove_button = Button(
-        phrases_2_frame, text="Remove", command=gui_remove_phrase)
-    phrases_remove_button.pack(side=LEFT, padx=10)
-    root.mainloop()
-except KeyboardInterrupt:
-    print("[*] Exiting settings...")
+if __name__ == "__main__":
+    if getuid() != 0:
+        print(f"{RED}[{DEFAULT}-{RED}]{DEFAULT} {BLUE}Run it as root{DEFAULT}")
+        exit()
+    languages_language = get_languages_language()
+    if not languages_language:
+        print(
+            f"{RED}[{DEFAULT}-{RED}]{DEFAULT} {BLUE}No languages found{DEFAULT}")
+        exit()
+    print(
+        f"{YELLOW}[{DEFAULT}*{YELLOW}]{DEFAULT} {BLUE}Starting settings...{DEFAULT}")
+    try:
+        root = Tk()
+        root.title("Settings")
+        users_frame = LabelFrame(root, text="Users", padx=5, pady=5)
+        users_frame.pack(side=TOP, padx=10, pady=10)
+        users_name_label = Label(users_frame, text="Name")
+        users_name_label.pack(side=LEFT, padx=10)
+        users_name_entry = Entry(users_frame)
+        users_name_entry.pack(side=LEFT, padx=10)
+        users_birth_date_label = Label(
+            users_frame, text="Birth Date")
+        users_birth_date_label.pack(side=LEFT, padx=10)
+        users_birth_date_entry = Entry(users_frame)
+        users_birth_date_entry.pack(side=LEFT, padx=10)
+        users_language_entry = StringVar(root)
+        users_language_entry.set(languages_language[0])
+        users_language_menu = OptionMenu(
+            users_frame, users_language_entry, *languages_language)
+        users_language_menu.pack(side=LEFT, padx=10)
+        users_create_button = Button(
+            users_frame, text="Create", command=gui_create_user)
+        users_create_button.pack(side=LEFT, padx=10)
+        user_remove_button = Button(
+            users_frame, text="Remove", command=gui_remove_user)
+        user_remove_button.pack(side=LEFT, padx=10)
+        users_list = Listbox(users_frame)
+        users_list.pack(side=LEFT, padx=10)
+        gui_update_user_list()
+        roles_frame = LabelFrame(root, text="Roles", padx=5, pady=5)
+        roles_frame.pack(side=TOP, padx=10, pady=10)
+        roles_1_frame = Frame(roles_frame)
+        roles_1_frame.pack(side=TOP, pady=10)
+        roles_role_label = Label(roles_1_frame, text="Role")
+        roles_role_label.pack(side=LEFT, padx=10)
+        roles_role_entry = Entry(roles_1_frame)
+        roles_role_entry.pack(side=LEFT, padx=10)
+        roles_age_restriction_entry = BooleanVar()
+        roles_age_restriction_check = Checkbutton(
+            roles_1_frame, text="Age Restriction", variable=roles_age_restriction_entry)
+        roles_age_restriction_check.pack(side=LEFT, padx=10)
+        roles_create_button = Button(
+            roles_1_frame, text="Create", command=gui_create_role)
+        roles_create_button.pack(side=LEFT, padx=10)
+        role_remove_button = Button(
+            roles_1_frame, text="Remove", command=gui_remove_role)
+        role_remove_button.pack(side=LEFT, padx=10)
+        roles_list = Listbox(roles_1_frame)
+        roles_list.pack(side=LEFT, padx=10)
+        gui_update_role_list()
+        roles_2_frame = Frame(roles_frame)
+        roles_2_frame.pack(side=TOP, pady=10)
+        roles_users_role_entry = StringVar(root)
+        roles_users_role_menu = OptionMenu(
+            roles_2_frame, roles_users_role_entry, "")
+        roles_users_role_menu.pack(side=LEFT, padx=10)
+        gui_update_roles_role_menu()
+        roles_users_user_entry = StringVar(root)
+        roles_users_user_menu = OptionMenu(
+            roles_2_frame, roles_users_user_entry, "")
+        roles_users_user_menu.pack(side=LEFT, padx=10)
+        gui_update_roles_user_menu()
+        roles_assignment_button = Button(
+            roles_2_frame, text="Assign", command=gui_assign_role)
+        roles_assignment_button.pack(side=LEFT, padx=10)
+        roles_deassignment_button = Button(
+            roles_2_frame, text="Deassign", command=gui_deassign_role)
+        roles_deassignment_button.pack(side=LEFT, padx=10)
+        roles_users_list = Listbox(roles_2_frame)
+        roles_users_list.pack(side=LEFT, padx=10)
+        gui_update_role_user_list()
+        commands_frame = LabelFrame(root, text="Commands", padx=5, pady=5)
+        commands_frame.pack(side=TOP, padx=10, pady=10)
+        commands_1_frame = Frame(commands_frame)
+        commands_1_frame.pack(side=TOP, pady=10)
+        commands_command_label = Label(
+            commands_1_frame, text="Command")
+        commands_command_label.pack(side=LEFT, padx=10)
+        commands_command_entry = Entry(commands_1_frame)
+        commands_command_entry.pack(side=LEFT, padx=10)
+        commands_description_label = Label(
+            commands_1_frame, text="Description")
+        commands_description_label.pack(side=LEFT, padx=10)
+        commands_description_entry = Entry(commands_1_frame)
+        commands_description_entry.pack(side=LEFT, padx=10)
+        commands_create_button = Button(
+            commands_1_frame, text="Create", command=gui_create_command)
+        commands_create_button.pack(side=LEFT, padx=10)
+        commands_remove_button = Button(
+            commands_1_frame, text="Remove", command=gui_remove_command)
+        commands_remove_button.pack(side=LEFT, padx=10)
+        commands_list = Listbox(commands_1_frame)
+        commands_list.pack(side=LEFT, padx=10)
+        gui_update_command_list()
+        commands_2_frame = Frame(commands_frame)
+        commands_2_frame.pack(side=TOP, pady=10)
+        commands_roles_command_entry = StringVar(root)
+        commands_roles_command_menu = OptionMenu(
+            commands_2_frame, commands_roles_command_entry, "")
+        commands_roles_command_menu.pack(side=LEFT, padx=10)
+        gui_update_commands_command_menu()
+        commands_roles_role_entry = StringVar(root)
+        commands_roles_role_menu = OptionMenu(
+            commands_2_frame, commands_roles_role_entry, "")
+        commands_roles_role_menu.pack(side=LEFT, padx=10)
+        gui_update_commands_role_menu()
+        commands_assignment_button = Button(
+            commands_2_frame, text="Assign", command=gui_assign_command)
+        commands_assignment_button.pack(side=LEFT, padx=10)
+        commands_deassignment_button = Button(
+            commands_2_frame, text="Deassign", command=gui_deassign_command)
+        commands_deassignment_button.pack(side=LEFT, padx=10)
+        commands_roles_list = Listbox(commands_2_frame)
+        commands_roles_list.pack(side=LEFT, padx=10)
+        gui_update_command_role_list()
+        phrases_frame = LabelFrame(root, text="Phrases", padx=5, pady=5)
+        phrases_frame.pack(side=TOP, padx=10, pady=10)
+        phrases_1_frame = Frame(phrases_frame)
+        phrases_1_frame.pack(side=TOP, pady=10)
+        phrases_language_entry = StringVar(root)
+        phrases_language_entry.set(languages_language[0])
+        phrases_language_menu = OptionMenu(
+            phrases_1_frame, phrases_language_entry, *languages_language)
+        phrases_language_menu.pack(side=LEFT, padx=10)
+        phrases_command_entry = StringVar(root)
+        phrases_command_menu = OptionMenu(
+            phrases_1_frame, phrases_command_entry, "")
+        phrases_command_menu.pack(side=LEFT, padx=10)
+        gui_update_phrases_command_menu()
+        phrases_response_label = Label(
+            phrases_1_frame, text="Response")
+        phrases_response_label.pack(side=LEFT, padx=10)
+        phrases_response_entry = Entry(phrases_1_frame)
+        phrases_response_entry.pack(side=LEFT, padx=10)
+        phrases_2_frame = Frame(phrases_frame)
+        phrases_2_frame.pack(side=TOP, pady=10)
+        phrases_phrases_label = Label(
+            phrases_2_frame, text="Phrases")
+        phrases_phrases_label.pack(side=LEFT, padx=10)
+        phrases_phrases_text = Text(phrases_2_frame)
+        phrases_phrases_text.pack(side=LEFT, padx=10)
+        phrases_create_button = Button(
+            phrases_2_frame, text="Create", command=gui_create_phrase)
+        phrases_create_button.pack(side=LEFT, padx=10)
+        phrases_remove_button = Button(
+            phrases_2_frame, text="Remove", command=gui_remove_phrase)
+        phrases_remove_button.pack(side=LEFT, padx=10)
+        root.mainloop()
+    except KeyboardInterrupt:
+        print("[*] Exiting settings...")
