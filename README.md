@@ -37,6 +37,8 @@ To enter the settings just type the following command in the terminal:
 sudo ./config.py
 ```
 
+It's important never to modify configuration files directly. To do this, it's essential to use the above configuration program.
+
 Once configured, to start the application type the following command in the terminal:
 
 ```bash

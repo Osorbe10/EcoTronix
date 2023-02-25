@@ -20,7 +20,7 @@ trap control_c INT
 # Checks that the installation has superuser permissions
 
 if [[ $(id -u) -ne 0 ]]; then
-    echo -ne "${RED}[${DEFAULT}*${RED}]${DEFAULT} ${BLUE}Run it as root${DEFAULT}\n"
+    echo -ne "${RED}[${DEFAULT}-${RED}]${DEFAULT} ${BLUE}Run it as root${DEFAULT}\n"
     exit
 fi
 
@@ -29,7 +29,7 @@ fi
 eval $(vcgencmd get_camera | cut -d "," -f 1);
 
 if [[ ${supported} -ne 1 || ${detected} -ne 1 ]]; then
-    echo -ne "${RED}[${DEFAULT}*${RED}]${DEFAULT} ${BLUE}Enable camera or check that is properly connected${DEFAULT}\n"
+    echo -ne "${RED}[${DEFAULT}-${RED}]${DEFAULT} ${BLUE}Enable camera or check that is properly connected${DEFAULT}\n"
     echo -ne "${BLUE}(1) --> sudo raspi-config${DEFAULT}\n"
     echo -ne "${BLUE}(2) ----> Interface Options${DEFAULT}\n"
     echo -ne "${BLUE}(3) ------> Legacy Camera${DEFAULT}\n"
@@ -61,7 +61,7 @@ function install_apt_dependencies {
 # pip dependencies
 
 function install_pip_dependencies {
-    pip_dependencies=(chime face-recognition pocketsphinx PyAudio)
+    pip_dependencies=(chime face-recognition paho-mqtt pocketsphinx PyAudio rshell)
     for dependence in ${pip_dependencies[@]}; do
         pip3 list | grep -F "${dependence}" >/dev/null 2>&1
         if [[ $? -ne 0 ]]; then
@@ -147,7 +147,7 @@ function install_language_packages {
     done
     if ! [[ -f "${languages_path}/${languages[0]}/${languages[0]}.list" ]]; then
         sudo touch ${languages_path}/${languages[0]}/${languages[0]}.list
-        jq --arg language "${languages[0]}" --arg hmm "${language_files[0,${hmm_row}]}" --arg dic "${language_files[0,${dic_row}]}" --arg kws "${language_files[0,${kws_row}]}" '.languages += [{"language": $language, "hmm": $hmm, "dic": $dic, "kws": $kws, "phrases": []}]' config.json > tmp.json && mv tmp.json config.json
+        sudo jq --arg language "${languages[0]}" --arg hmm "${language_files[0,${hmm_row}]}" --arg dic "${language_files[0,${dic_row}]}" --arg kws "${language_files[0,${kws_row}]}" '.languages += [{"language": $language, "hmm": $hmm, "dic": $dic, "kws": $kws, "phrases": []}]' config.json > tmp.json && mv tmp.json config.json
     fi
     echo -ne "${YELLOW}Enter the numbers of the languages you want to install (separated by a space): ${DEFAULT}"
     read selected_languages
@@ -158,7 +158,7 @@ function install_language_packages {
                 install_es-es_language ${languages_path} ${languages[${i}]}
             fi
             sudo touch ${languages_path}/${languages[${i}]}/${languages[${i}]}.list
-            jq --arg language "${languages[${i}]}" --arg hmm "${language_files[${i},${hmm_row}]}" --arg dic "${language_files[${i},${dic_row}]}" --arg kws "${language_files[${i},${kws_row}]}" '.languages += [{"language": $language, "hmm": $hmm, "dic": $dic, "kws": $kws, "phrases": []}]' config.json > tmp.json && mv tmp.json config.json
+            sudo jq --arg language "${languages[${i}]}" --arg hmm "${language_files[${i},${hmm_row}]}" --arg dic "${language_files[${i},${dic_row}]}" --arg kws "${language_files[${i},${kws_row}]}" '.languages += [{"language": $language, "hmm": $hmm, "dic": $dic, "kws": $kws, "phrases": []}]' config.json > tmp.json && mv tmp.json config.json
             echo -ne "${GREEN}[${DEFAULT}+${GREEN}]${DEFAULT} ${BLUE}${languages[${i}]} is now installed${DEFAULT}\n"
         fi
     done
@@ -170,24 +170,28 @@ function install_language_packages {
 function pi_environment {
     echo -ne "${YELLOW}[${DEFAULT}*${YELLOW}]${DEFAULT} ${BLUE}Preparing Raspberry Pi environment...${DEFAULT}\n"
     if ! [[ -d "Faces/Encoded" ]]; then
-        mkdir -p Faces/Encoded
+        sudo mkdir -p Faces/Encoded
         sudo chown -R $SUDO_USER:$SUDO_USER Faces
     fi
-    sudo chmod +x config.py start.py
+    sudo chmod +x config.py start.py Pico/install.sh
     sudo systemctl enable mosquitto >/dev/null 2>&1
+    echo -ne "${GREEN}[${DEFAULT}+${GREEN}]${DEFAULT} ${BLUE}Raspberry Pi environment prepared${DEFAULT}\n"
 }
 
-# Start installation
+# Finish installation
+
+function finish {
+    echo -ne "${GREEN}[${DEFAULT}+${GREEN}]${DEFAULT} ${BLUE}Installation completed${DEFAULT}\n"
+    echo -ne "${YELLOW}Press any button to reboot system...${DEFAULT}\n"
+    read -n 1 -s -r
+    sudo shutdown -r now
+}
+
+# Installation
 
 install_apt_dependencies
 install_dlib_dependence
 install_pip_dependencies
 install_language_packages
 pi_environment
-
-# Reboot system
-
-echo -ne "${GREEN}[${DEFAULT}+${GREEN}]${DEFAULT} ${BLUE}Installation completed${DEFAULT}\n"
-echo -ne "${YELLOW}Press any button to reboot system...${DEFAULT}\n"
-read -n 1 -s -r reboot_response
-sudo shutdown -r now
+finish
