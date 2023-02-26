@@ -347,9 +347,6 @@ Main.
 """
 
 if __name__ == "__main__":
-    if getuid() != 0:
-        print(f"{RED}[{DEFAULT}-{RED}]{DEFAULT} {BLUE}Run it as root{DEFAULT}")
-        exit()
     languages = get_installed_languages()
     if not languages:
         print(f"{RED}[{DEFAULT}-{RED}]{DEFAULT} {BLUE}No languages found{DEFAULT}")

@@ -34,7 +34,7 @@ Once the installation is finished, it is recommended to enter the settings to co
 To enter the settings just type the following command in the terminal:
 
 ```bash
-sudo ./config.py
+./config.py
 ```
 
 It's important never to modify configuration files directly. To do this, it's essential to use the above configuration program.

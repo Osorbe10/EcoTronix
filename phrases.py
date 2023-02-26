@@ -1,8 +1,7 @@
 from commands import command_format
-from constants import BLUE, CONFIG_FILE, CONFIG_PATH, DEFAULT, GREEN, RED
+from constants import BLUE, CONFIG_FILE, CONFIG_PATH, DEFAULT, GREEN, LANGUAGES_PATH, RED
 from json import dump, load
 from os import path
-from pocketsphinx import get_model_path
 from re import compile, findall, sub
 
 """
@@ -117,7 +116,7 @@ def create_phrase(language, command, response, phrases):
                     if phrase not in new_phrase["phrases"]:
                         new_phrase["phrases"].append(sub(r"\s+\n", "\n", phrase.strip()).strip())
                         thresholds.append(threshold)
-                with open(path.join(get_model_path(), language, config_language["kws"]), "r+") as list_file:
+                with open(path.join(LANGUAGES_PATH, language, config_language["kws"]), "r+") as list_file:
                     lines = list_file.readlines()
                     index = 0
                     for phrase in new_phrase["phrases"]:

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 from chime import info, success, warning
-from constants import BLUE, CONFIG_FILE, CONFIG_PATH, DEFAULT, ENCODED_FACES_EXTENSION, ENCODED_FACES_PATH, GREEN, RED, YELLOW
+from constants import BLUE, CONFIG_FILE, CONFIG_PATH, DEFAULT, ENCODED_FACES_EXTENSION, ENCODED_FACES_PATH, GREEN, LANGUAGES_PATH, RED, YELLOW
 from contextlib import contextmanager
 from cv2 import CAP_V4L2, resize, VideoCapture
 from face_recognition import compare_faces, face_distance, face_encodings, face_locations
@@ -10,7 +10,7 @@ from languages import get_language_paths
 from numpy import argmin, load as numpy_load
 from os import devnull, path
 from paho.mqtt.client import Client
-from pocketsphinx import Config, Decoder, get_model_path
+from pocketsphinx import Config, Decoder
 from pyaudio import paInt16, PyAudio
 from roles import get_user_roles
 from subprocess import Popen
@@ -119,7 +119,7 @@ Runs speech recognition until stop event is set.
 """
 
 def speech_recognition(user_name, language, hmm_path, dic_path, kws_path, stop):
-    language_path = path.join(get_model_path(), language)
+    language_path = path.join(LANGUAGES_PATH, language)
     config = Config(lm=None, hmm=path.join(language_path, hmm_path), dict=path.join(language_path, dic_path), kws=path.join(language_path, kws_path), logfn=devnull)
     decoder = Decoder(config)
     decoder.start_utt()

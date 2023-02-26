@@ -136,7 +136,15 @@ function install_language_packages {
     language_files[1,${hmm_row}]="cmusphinx-es-5.2/model_parameters/voxforge_es_sphinx.cd_ptm_4000"
     language_files[1,${dic_row}]="es.dict"
     language_files[1,${kws_row}]="es-es.list"
-    languages_path=$(python3 -c "from pocketsphinx import get_model_path; print(get_model_path())")
+    languages_path="Languages"
+    if ! [[ -d ${languages_path} ]]; then
+        sudo mkdir ${languages_path}
+        sudo cp -r $(python3 -c "from pocketsphinx import get_model_path; print(get_model_path())")/${languages[0]} ${languages_path}/${languages[0]} 
+    fi
+    if ! [[ -f "${languages_path}/${languages[0]}/${languages[0]}.list" ]]; then
+        sudo touch ${languages_path}/${languages[0]}/${languages[0]}.list
+        sudo jq --arg language "${languages[0]}" --arg hmm "${language_files[0,${hmm_row}]}" --arg dic "${language_files[0,${dic_row}]}" --arg kws "${language_files[0,${kws_row}]}" '.languages += [{"language": $language, "hmm": $hmm, "dic": $dic, "kws": $kws, "phrases": []}]' config.json > tmp.json && mv tmp.json config.json
+    fi
     echo -ne "${YELLOW}Available speech recognition language (X = installed): ${DEFAULT}\n"
     for (( i=0; i<${#languages[@]}; i++ )); do
         if [[ -d "${languages_path}/${languages[${i}]}" ]]; then
@@ -145,10 +153,6 @@ function install_language_packages {
             echo -ne "${YELLOW}[${GREEN}$i${DEFAULT}${YELLOW}]${DEFAULT} ${YELLOW}${languages[${i}]}${DEFAULT}\n"
         fi
     done
-    if ! [[ -f "${languages_path}/${languages[0]}/${languages[0]}.list" ]]; then
-        sudo touch ${languages_path}/${languages[0]}/${languages[0]}.list
-        sudo jq --arg language "${languages[0]}" --arg hmm "${language_files[0,${hmm_row}]}" --arg dic "${language_files[0,${dic_row}]}" --arg kws "${language_files[0,${kws_row}]}" '.languages += [{"language": $language, "hmm": $hmm, "dic": $dic, "kws": $kws, "phrases": []}]' config.json > tmp.json && mv tmp.json config.json
-    fi
     echo -ne "${YELLOW}Enter the numbers of the languages you want to install (separated by a space): ${DEFAULT}"
     read selected_languages
     for i in ${selected_languages}; do
@@ -162,6 +166,7 @@ function install_language_packages {
             echo -ne "${GREEN}[${DEFAULT}+${GREEN}]${DEFAULT} ${BLUE}${languages[${i}]} is now installed${DEFAULT}\n"
         fi
     done
+    sudo chown -R $SUDO_USER:$SUDO_USER ${languages_path}
     sudo chown $SUDO_USER:$SUDO_USER config.json
 }
 
@@ -173,7 +178,7 @@ function pi_environment {
         sudo mkdir -p Faces/Encoded
         sudo chown -R $SUDO_USER:$SUDO_USER Faces
     fi
-    sudo chmod +x config.py start.py Pico/install.sh
+    sudo chmod +x config.py start.py
     sudo systemctl enable mosquitto >/dev/null 2>&1
     echo -ne "${GREEN}[${DEFAULT}+${GREEN}]${DEFAULT} ${BLUE}Raspberry Pi environment prepared${DEFAULT}\n"
 }
