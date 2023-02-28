@@ -178,8 +178,26 @@ function pi_environment {
         sudo mkdir -p Faces/Encoded
         sudo chown -R $SUDO_USER:$SUDO_USER Faces
     fi
-    sudo chmod +x config.py start.py
-    sudo systemctl enable mosquitto >/dev/null 2>&1
+    sudo chmod +x config.py start.py Pico/setup.sh
+    mqtt_credentials_path="/etc/mosquitto/EcoTronix"
+    if ! [[ -f "${mqtt_credentials_path}" ]]; then
+        mqtt_host=$(cat /proc/sys/kernel/hostname)
+        mqtt_port=1883
+        mqtt_username="EcoTronix"
+        mqtt_password=$(openssl rand -hex 16)
+        echo "${mqtt_username}:${mqtt_password}" > /etc/mosquitto/EcoTronix
+        mosquitto_passwd -U ${mqtt_credentials_path}
+        mqtt_config_path="/etc/mosquitto/conf.d/EcoTronix.conf"
+        touch ${mqtt_config_path}
+        echo "per_listener_settings true" >> ${mqtt_config_path}
+        echo "allow_anonymous false" >> ${mqtt_config_path}
+        echo "password_file ${mqtt_credentials_path}" >> ${mqtt_config_path}
+        jq --arg host "${mqtt_host}" --arg port ${mqtt_port} --arg username "${mqtt_username}" --arg password "${mqtt_password}" '.mqtt |= {"host": $host, "port": $port, "username": $username, "password": $password}' config.json > tmp.new && mv tmp.new config.json
+        sudo chown $SUDO_USER:$SUDO_USER config.json
+    else
+        sudo systemctl enable mosquitto.service >/dev/null 2>&1
+    fi
+    sudo systemctl restart mosquitto.service
     echo -ne "${GREEN}[${DEFAULT}+${GREEN}]${DEFAULT} ${BLUE}Raspberry Pi environment prepared${DEFAULT}\n"
 }
 

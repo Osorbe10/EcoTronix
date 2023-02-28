@@ -92,21 +92,22 @@ def get_users():
             languages.append(user["language"])
             encoded_faces.append(numpy_load(ENCODED_FACES_PATH + user["face"] + ENCODED_FACES_EXTENSION))
         if len(names) == 0:
-            print(f"{YELLOW}[{DEFAULT}*{YELLOW}]{DEFAULT} {BLUE}No users found{DEFAULT}")
+            print(f"{RED}[{DEFAULT}-{RED}]{DEFAULT} {BLUE}No users found{DEFAULT}")
             return False
     return (encoded_faces, names, languages)
 
 """
 Connects to MQTT broker.
+@param client: MQTT client
 """
 
 def start_mqtt(client):
     client = Client()
-
-    # TODO: Get MQTT parameters from configuration file
-
-    client.username_pw_set("pi", password="pi")
-    client.connect("raspberrypi", 1883)
+    with open(CONFIG_PATH + CONFIG_FILE, "r") as config_file:
+        mqtt_config = json_load(config_file)["mqtt"]
+        client.username_pw_set(mqtt_config["username"], password=mqtt_config["password"])
+        client.connect(mqtt_config["host"], mqtt_config["port"])
+    client.loop_start()
 
 """
 Runs speech recognition until stop event is set.
@@ -119,8 +120,7 @@ Runs speech recognition until stop event is set.
 """
 
 def speech_recognition(user_name, language, hmm_path, dic_path, kws_path, stop):
-    language_path = path.join(LANGUAGES_PATH, language)
-    config = Config(lm=None, hmm=path.join(language_path, hmm_path), dict=path.join(language_path, dic_path), kws=path.join(language_path, kws_path), logfn=devnull)
+    config = Config(lm=None, hmm=path.join(LANGUAGES_PATH, language, hmm_path), dict=path.join(LANGUAGES_PATH, language, dic_path), kws=path.join(LANGUAGES_PATH, language, kws_path), logfn=devnull)
     decoder = Decoder(config)
     decoder.start_utt()
     with alsa_error():
@@ -188,6 +188,7 @@ def face_recognition():
                                         stop.clear()
                                     if client is not None:
                                         client.disconnect()
+                                    start_mqtt(client)
                                     t_speech = Thread(target=speech_recognition, args=(user_name, language, hmm_path, dic_path, kws_path, stop))
                                     t_speech.start()
                 process_frame = not process_frame

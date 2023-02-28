@@ -4,7 +4,6 @@ from commands import create_command, get_commands, remove_command, assign_comman
 from constants import BLUE, DEFAULT, POSITIONS_IN_ROOM, RED, YELLOW
 from devices import create_device, install_device, remove_device
 from languages import get_installed_languages
-from os import getuid
 from phrases import create_phrase, remove_phrase
 from roles import create_role, get_roles, remove_role, assign_role, deassign_role
 from rooms import create_room, get_rooms, remove_room
@@ -378,6 +377,9 @@ if __name__ == "__main__":
         rooms_create_button.pack(side=LEFT, padx=10)
         rooms_remove_button = Button(rooms_frame, text="Remove Room", command=gui_remove_room)
         rooms_remove_button.pack(side=LEFT, padx=10)
+        rooms_devices_list = Listbox(rooms_frame)        
+        rooms_devices_list.pack(side=LEFT, padx=10)
+        gui_update_rooms_devices_list()
 
         devices_frame = LabelFrame(rooms_devices_frame, padx=5, pady=5)
         devices_frame.pack(side=TOP, pady=10)
@@ -396,9 +398,6 @@ if __name__ == "__main__":
         devices_remove_button.pack(side=LEFT, padx=10)
         devices_install_button = Button(devices_frame, text="Install Device", command=gui_install_device)
         devices_install_button.pack(side=LEFT, padx=10)
-        rooms_devices_list = Listbox(devices_frame)
-        rooms_devices_list.pack(side=LEFT, padx=10)
-        gui_update_rooms_devices_list()
 
         users_roles_frame = LabelFrame(root_frame, text="Users & Roles", padx=5, pady=5)
         users_roles_frame.pack(side=TOP, padx=10, pady=10)
@@ -481,7 +480,7 @@ if __name__ == "__main__":
         commands_description_entry = Entry(commands_1_frame)
         commands_description_entry.pack(side=LEFT, padx=10)
         commands_local_entry = BooleanVar()
-        commands_local_check = Checkbutton(commands_1_frame, text="Local command", variable=commands_local_entry)
+        commands_local_check = Checkbutton(commands_1_frame, text="Execute Locally", variable=commands_local_entry)
         commands_local_check.pack(side=LEFT, padx=10)
         commands_create_button = Button(commands_1_frame, text="Create Command", command=gui_create_command)
         commands_create_button.pack(side=LEFT, padx=10)

@@ -1,7 +1,8 @@
 {
-    "rooms": [],
-    "users": [],
-    "roles": [],
-    "commands": [],
-    "languages": []
+  "rooms": [],
+  "users": [],
+  "roles": [],
+  "commands": [],
+  "languages": [],
+  "mqtt": {}
 }

@@ -103,9 +103,12 @@ def install_device(room, position):
     if config_device["installed"]:
         print(f"{RED}[{DEFAULT}-{RED}]{DEFAULT} {BLUE}Device already installed{DEFAULT}")
         return False
-    status = call([PICO_PATH + PICO_SETUP, room, position])
-    if status != 0:
-        print(f"{RED}[{DEFAULT}-{RED}]{DEFAULT} {BLUE}Device installation failed{DEFAULT}")
+    try:
+        if call([PICO_PATH + PICO_SETUP, room, position]) != 0:
+            print(f"{RED}[{DEFAULT}-{RED}]{DEFAULT} {BLUE}Device installation failed{DEFAULT}")
+            return False
+    except KeyboardInterrupt:
+        print(f"{RED}[{DEFAULT}-{RED}]{DEFAULT} {BLUE}Device installation cancelled{DEFAULT}")
         return False
     with open(CONFIG_PATH + CONFIG_FILE, "r+") as config_file:
         config = load(config_file)
