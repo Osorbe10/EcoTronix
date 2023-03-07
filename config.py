@@ -1,345 +1,558 @@
 #!/usr/bin/env python3
 
-from commands import create_command, get_commands, remove_command, assign_command, deassign_command
 from constants import BLUE, DEFAULT, POSITIONS_IN_ROOM, RED, YELLOW
+
+from commands import create_command, get_commands, remove_command, assign_command, deassign_command
 from devices import create_device, install_device, remove_device
 from languages import get_installed_languages
 from phrases import create_phrase, remove_phrase
 from roles import create_role, get_roles, remove_role, assign_role, deassign_role
 from rooms import create_room, get_rooms, remove_room
 from users import create_user, get_users, remove_user
-from tkinter import ALL, BooleanVar, BOTH, Button, Canvas, Checkbutton, END, Entry, Frame, Label, LabelFrame, LEFT, Listbox, N, OptionMenu, Radiobutton, RIGHT, Scrollbar, StringVar, Text, Tk, TOP, VERTICAL, W, Y
+
+from tkinter import BooleanVar, BOTH, Button, Checkbutton, END, Entry, Frame, Label, LEFT, Listbox, OptionMenu, StringVar, Text, Tk, ttk, TOP
 
 """
-Creates a room in graphical mode.
+Settings GUI
 """
 
-def gui_create_room():
-    room = rooms_room_entry.get()
-    create_room(room)
-    gui_update_devices_room_menu()
-    gui_update_rooms_devices_list()
+class Config(Tk):
 
-"""
-Removes a room in graphical mode.
-"""
+    """
+    Creates a room in graphical mode.
+    """
 
-def gui_remove_room():
-    room = rooms_room_entry.get()
-    remove_room(room)
-    gui_update_devices_room_menu()
-    gui_update_rooms_devices_list()
+    def gui_create_room(self):
+        create_room(self.rooms_room_entry.get())
+        Config.gui_update_rooms_list(self)
+        Config.gui_update_devices_room_menu(self)
 
-"""
-Update rooms menu in graphical mode.
-"""
+    """
+    Removes a room in graphical mode.
+    """
 
-def gui_update_devices_room_menu():
-    devices_room_menu["menu"].delete(0, END)
-    rooms = get_rooms()
-    if rooms:
-        for room in rooms:
-            devices_room_menu["menu"].add_command(label=room["room"], command=lambda value=room["room"]: devices_room_entry.set(value))
-        devices_room_entry.set(rooms[0]["room"])
-    else:
-        devices_room_menu["menu"].add_command(label="", command=lambda value="": devices_room_entry.set(value))
-        devices_room_entry.set("")
+    def gui_remove_room(self):
+        remove_room(self.rooms_room_entry.get())
+        Config.gui_update_rooms_list(self)
+        Config.gui_update_devices_list(self)
+        Config.gui_update_devices_room_menu(self)
 
-"""
-Update room's and device's list in graphical mode.
-"""
+    """
+    Creates a device in graphical mode.
+    """
 
-def gui_update_rooms_devices_list():
-    rooms_devices_list.delete(0, END)
-    rooms = get_rooms()
-    if rooms:
-        for room in rooms:
-            rooms_devices_list.insert(END, room["room"] + " [ " + ", ".join([device["position"] if device["installed"] else device["position"] + " (not installed)" for device in room["devices"]]) + " ]")
-    else:
-        rooms_devices_list.insert(END, "Non existing rooms...")
-    rooms_devices_list.config(width=max([len(room) for room in rooms_devices_list.get(0, END)]))
-    rooms_devices_list.config(height=rooms_devices_list.size())
+    def gui_create_device(self):
+        create_device(self.devices_room_entry.get(), self.devices_position_entry.get())
+        Config.gui_update_devices_list(self)
 
-"""
-Creates a device in graphical mode.
-"""
+    """
+    Removes a device in graphical mode.
+    """
 
-def gui_create_device():
-    room = devices_room_entry.get()
-    position = devices_position_entry.get()
-    create_device(room, position)
-    gui_update_rooms_devices_list()
+    def gui_remove_device(self):
+        remove_device(self.devices_room_entry.get(), self.devices_position_entry.get())
+        Config.gui_update_devices_list(self)
 
-"""
-Removes a device in graphical mode.
-"""
+    """
+    Installs a device in graphical mode.
+    """
 
-def gui_remove_device():
-    room = devices_room_entry.get()
-    position = devices_position_entry.get()
-    remove_device(room, position)
-    gui_update_rooms_devices_list()
+    def gui_install_device(self):
+        install_device(self.devices_room_entry.get(), self.devices_position_entry.get())
+        Config.gui_update_devices_list(self)
 
-"""
-Installs a device in graphical mode.
-"""
+    """
+    Creates a user in graphical mode.
+    """
 
-def gui_install_device():
-    room = devices_room_entry.get()
-    position = devices_position_entry.get()
-    install_device(room, position)
-    gui_update_rooms_devices_list()
+    def gui_create_user(self):
+        create_user(self.users_name_entry.get(), self.users_birth_date_entry.get(), self.users_language_entry.get())
+        Config.gui_update_users_list(self)
+        Config.gui_update_roles_user_menu(self)
 
-"""
-Creates a user in graphical mode.
-"""
+    """
+    Removes a user in graphical mode.
+    """
 
-def gui_create_user():
-    name = users_name_entry.get()
-    birth_date = users_birth_date_entry.get()
-    language = users_language_entry.get()
-    create_user(name, birth_date, language)
-    gui_update_roles_users_user_menu()
-    gui_update_users_list()
+    def gui_remove_user(self):
+        remove_user(self.users_name_entry.get())
+        Config.gui_update_users_list(self)
+        Config.gui_update_roles_list(self)
+        Config.gui_update_roles_user_menu(self)
 
-"""
-Removes a user in graphical mode.
-"""
+    """
+    Creates a role in graphical mode.
+    """
 
-def gui_remove_user():
-    name = users_name_entry.get()
-    remove_user(name)
-    gui_update_roles_users_user_menu()
-    gui_update_users_list()
-    gui_update_roles_list()
+    def gui_create_role(self):
+        create_role(self.roles_role_entry.get(), self.roles_age_restriction_entry.get())
+        Config.gui_update_roles_list(self)
+        Config.gui_update_roles_role_menu(self)
+        Config.gui_update_commands_role_menu(self)
 
-"""
-Update role's user assignation menu in graphical mode.
-"""
+    """
+    Removes a role in graphical mode.
+    """
 
-def gui_update_roles_users_user_menu():
-    roles_users_user_menu["menu"].delete(0, END)
-    users = get_users()
-    if users:
-        for user in users:
-            roles_users_user_menu["menu"].add_command(label=user["name"], command=lambda value=user["name"]: roles_users_user_entry.set(value))
-        roles_users_user_entry.set(users[0]["name"])
-    else:
-        roles_users_user_menu["menu"].add_command(label="", command=lambda value="": roles_users_user_entry.set(value))
-        roles_users_user_entry.set("")
+    def gui_remove_role(self):
+        remove_role(self.roles_role_entry.get())
+        Config.gui_update_roles_list(self)
+        Config.gui_update_commands_list(self)
+        Config.gui_update_roles_role_menu(self)
+        Config.gui_update_commands_role_menu(self)
 
-"""
-Update user's list in graphical mode.
-"""
+    """
+    Assign a role to a user in graphical mode.
+    """
 
-def gui_update_users_list():
-    users_list.delete(0, END)
-    users = get_users()
-    if users:
-        for user in users:
-            users_list.insert(END, user["name"] + " [ " + str(user["age"]) + " years ] [ " + user["language"] + " ]")
-    else:
-        users_list.insert(END, "Non existing users...")
-    users_list.config(width=max([len(user) for user in users_list.get(0, END)]))
-    users_list.config(height=users_list.size())
+    def gui_assign_role(self):
+        assign_role(self.roles_assignment_role_entry.get(), self.roles_assignment_user_entry.get())
+        Config.gui_update_roles_list(self)
 
-"""
-Creates a role in graphical mode.
-"""
+    """
+    Deassign a role from a user in graphical mode.
+    """
 
-def gui_create_role():
-    role = roles_role_entry.get()
-    age_restriction = roles_age_restriction_entry.get()
-    create_role(role, age_restriction)
-    gui_update_roles_users_role_menu()
-    gui_update_commands_roles_role_menu()
-    gui_update_roles_list()
+    def gui_deassign_role(self):
+        deassign_role(self.roles_assignment_role_entry.get(), self.roles_assignment_user_entry.get())
+        Config.gui_update_roles_list(self)
 
-"""
-Removes a role in graphical mode.
-"""
+    """
+    Creates a command in graphical mode.
+    """
 
-def gui_remove_role():
-    role = roles_role_entry.get()
-    remove_role(role)
-    gui_update_roles_users_role_menu()
-    gui_update_commands_roles_role_menu()
-    gui_update_roles_list()
-    gui_update_command_list()
+    def gui_create_command(self):
+        create_command(self.commands_command_entry.get(), self.commands_description_entry.get(), self.commands_local_entry.get())
+        Config.gui_update_commands_list(self)
+        Config.gui_update_commands_command_menu(self)
+        Config.gui_update_phrases_command_menu(self)
 
-"""
-Update roles's role assignation menu in graphical mode.
-"""
+    """
+    Removes a command in graphical mode.
+    """
 
-def gui_update_roles_users_role_menu():
-    roles_users_role_menu["menu"].delete(0, END)
-    roles = get_roles()
-    if roles:
-        for role in roles:
-            roles_users_role_menu["menu"].add_command(label=role["role"], command=lambda value=role["role"]: roles_users_role_entry.set(value))
-        roles_users_role_entry.set(roles[0]["role"])
-    else:
-        roles_users_role_menu["menu"].add_command(label="", command=lambda value="": roles_users_role_entry.set(value))
-        roles_users_role_entry.set("")
+    def gui_remove_command(self):
+        remove_command(self.commands_command_entry.get())
+        Config.gui_update_commands_list(self)
+        Config.gui_update_commands_command_menu(self)
+        Config.gui_update_phrases_command_menu(self)
 
-"""
-Update role's list in graphical mode.
-"""
+    """
+    Assign a command to a role in graphical mode.
+    """
 
-def gui_update_roles_list():
-    roles_list.delete(0, END)
-    roles = get_roles()
-    if roles:
-        for role in roles:
-            roles_list.insert(END, role["role"] + " [ age restriction: " + str(role["age_restriction"]) + " ] [ " + ", ".join(role["users"]) + " ]")
-    else:
-        roles_list.insert(END, "Non existing roles...")
-    roles_list.config(width=max([len(role) for role in roles_list.get(0, END)]))
-    roles_list.config(height=roles_list.size())
+    def gui_assign_command(self):
+        assign_command(self.commands_assignment_command_entry.get(), self.commands_assignment_role_entry.get())
+        Config.gui_update_commands_list(self)
 
-"""
-Assign a role to a user in graphical mode.
-"""
+    """
+    Deassign a command from a role in graphical mode.
+    """
 
-def gui_assign_role():
-    role = roles_users_role_entry.get()
-    user = roles_users_user_entry.get()
-    assign_role(role, user)
-    gui_update_roles_list()
+    def gui_deassign_command(self):
+        deassign_command(self.commands_assignment_command_entry.get(), self.commands_assignment_role_entry.get())
+        Config.gui_update_commands_list(self)
 
-"""
-Deassign a role from a user in graphical mode.
-"""
+    """
+    Creates a phrase in graphical mode.
+    """
 
-def gui_deassign_role():
-    role = roles_users_role_entry.get()
-    user = roles_users_user_entry.get()
-    deassign_role(role, user)
-    gui_update_roles_list()
+    def gui_create_phrase(self):
+        create_phrase(self.phrases_language_entry.get(), self.phrases_command_entry.get(), self.phrases_response_entry.get(), self.phrases_phrases_text.get("1.0", END))
 
-"""
-Creates a command in graphical mode.
-"""
+    """
+    Removes phrase in graphical mode.
+    """
 
-def gui_create_command():
-    command = commands_command_entry.get()
-    description = commands_description_entry.get()
-    local = commands_local_entry.get()
-    create_command(command, description, local)
-    gui_update_commands_roles_command_menu()
-    gui_update_phrases_command_menu()
-    gui_update_command_list()
+    def gui_remove_phrase(self):
+        remove_phrase(self.phrases_language_entry.get(), self.phrases_command_entry.get())
 
-"""
-Removes a command in graphical mode.
-"""
+    """
+    Update room's list in graphical mode.
+    """
 
-def gui_remove_command():
-    command = commands_command_entry.get()
-    remove_command(command)
-    gui_update_commands_roles_command_menu()
-    gui_update_phrases_command_menu()
-    gui_update_command_list()
+    def gui_update_rooms_list(self):
+        self.rooms_list.delete(0, END)
+        rooms = get_rooms()
+        if rooms:
+            for room in rooms:
+                self.rooms_list.insert(END, room["room"])
+        else:
+            self.rooms_list.insert(END, "Non existing rooms...")
+        self.rooms_list.config(width=max([len(room) for room in self.rooms_list.get(0, END)]))
+        self.rooms_list.config(height=self.rooms_list.size())
 
-"""
-Update commands's command assignation menu in graphical mode.
-"""
+    """
+    Update device's list in graphical mode.
+    """
 
-def gui_update_commands_roles_command_menu():
-    commands_roles_command_menu["menu"].delete(0, END)
-    commands = get_commands()
-    if commands:
-        for command in commands:
-            commands_roles_command_menu["menu"].add_command(label=command["description"], command=lambda value=command["command"]: commands_roles_command_entry.set(value))
-        commands_roles_command_entry.set(commands[0]["command"])
-    else:
-        commands_roles_command_menu["menu"].add_command(label="", command=lambda value="": commands_roles_command_entry.set(value))
-        commands_roles_command_entry.set("")
+    def gui_update_devices_list(self):
+        self.devices_list.delete(0, END)
+        rooms = get_rooms()
+        if rooms:
+            for room in rooms:
+                if room["devices"]:
+                    self.devices_list.insert(END, room["room"] + " [ " + ", ".join([device["position"] if device["installed"] else device["position"] + " (not installed)" for device in room["devices"]]) + " ]")
+        else:
+            self.devices_list.insert(END, "Non existing devices...")
+        self.devices_list.config(width=max([len(room) for room in self.devices_list.get(0, END)]))
+        self.devices_list.config(height=self.devices_list.size())
 
-"""
-Update commands's role assignation menu in graphical mode.
-"""
+    """
+    Update user's list in graphical mode.
+    """
 
-def gui_update_commands_roles_role_menu():
-    commands_roles_role_menu["menu"].delete(0, END)
-    roles = get_roles()
-    if roles:
-        for role in roles:
-            commands_roles_role_menu["menu"].add_command(label=role["role"], command=lambda value=role["role"]: commands_roles_role_entry.set(value))
-        commands_roles_role_entry.set(roles[0]["role"])
-    else:
-        commands_roles_role_menu["menu"].add_command(label="", command=lambda value="": commands_roles_role_entry.set(value))
-        commands_roles_role_entry.set("")
+    def gui_update_users_list(self):
+        self.users_list.delete(0, END)
+        users = get_users()
+        if users:
+            for user in users:
+                self.users_list.insert(END, user["name"] + " [ " + str(user["age"]) + " years ] [ " + user["language"] + " ]")
+        else:
+            self.users_list.insert(END, "Non existing users...")
+        self.users_list.config(width=max([len(user) for user in self.users_list.get(0, END)]))
+        self.users_list.config(height=self.users_list.size())
 
-"""
-Update phrases's command menu in graphical mode.
-"""
+    """
+    Update role's list in graphical mode.
+    """
 
-def gui_update_phrases_command_menu():
-    phrases_command_menu["menu"].delete(0, END)
-    commands = get_commands()
-    if commands:
-        for command in commands:
-            phrases_command_menu["menu"].add_command(label=command["description"], command=lambda value=command["command"]: phrases_command_entry.set(value))
-        phrases_command_entry.set(commands[0]["command"])
-    else:
-        phrases_command_menu["menu"].add_command(label="", command=lambda value="": phrases_command_entry.set(value))
-        phrases_command_entry.set("")
+    def gui_update_roles_list(self):
+        self.roles_list.delete(0, END)
+        roles = get_roles()
+        if roles:
+            for role in roles:
+                self.roles_list.insert(END, role["role"] + " [ age restriction: " + str(role["age_restriction"]) + " ] [ " + ", ".join(role["users"]) + " ]")
+        else:
+            self.roles_list.insert(END, "Non existing roles...")
+        self.roles_list.config(width=max([len(role) for role in self.roles_list.get(0, END)]))
+        self.roles_list.config(height=self.roles_list.size())
 
-"""
-Update command's list in graphical mode.
-"""
+    """
+    Update command's list in graphical mode.
+    """
 
-def gui_update_command_list():
-    commands_list.delete(0, END)
-    commands = get_commands()
-    if commands:
-        for command in commands:
-            commands_list.insert(END, command["description"] + " [ local: " + str(command["local"]) + " ] [ " + ", ".join(command["roles"]) + " ]")
-    else:
-        commands_list.insert(END, "Non existing commands...")
-    commands_list.config(width=max([len(command) for command in commands_list.get(0, END)]))
-    commands_list.config(height=commands_list.size())
+    def gui_update_commands_list(self):
+        self.commands_list.delete(0, END)
+        commands = get_commands()
+        if commands:
+            for command in commands:
+                self.commands_list.insert(END, command["description"] + " [ local: " + str(command["local"]) + " ] [ " + ", ".join(command["roles"]) + " ]")
+        else:
+            self.commands_list.insert(END, "Non existing commands...")
+        self.commands_list.config(width=max([len(command) for command in self.commands_list.get(0, END)]))
+        self.commands_list.config(height=self.commands_list.size())
 
-"""
-Assign a command to a role in graphical mode.
-"""
+    """
+    Update device's room menu in graphical mode.
+    """
 
-def gui_assign_command():
-    command = commands_roles_command_entry.get()
-    role = commands_roles_role_entry.get()
-    assign_command(command, role)
-    gui_update_command_list()
+    def gui_update_devices_room_menu(self):
+        self.devices_room_menu["menu"].delete(0, END)
+        rooms = get_rooms()
+        if rooms:
+            for room in rooms:
+                self.devices_room_menu["menu"].add_command(label=room["room"], command=lambda value=room["room"]: self.devices_room_entry.set(value))
+            self.devices_room_entry.set(rooms[0]["room"])
+        else:
+            self.devices_room_menu["menu"].add_command(label="", command=lambda value="": self.devices_room_entry.set(value))
+            self.devices_room_entry.set("")
 
-"""
-Deassign a command from a role in graphical mode.
-"""
+    """
+    Update role's user assignation menu in graphical mode.
+    """
 
-def gui_deassign_command():
-    command = commands_roles_command_entry.get()
-    role = commands_roles_role_entry.get()
-    deassign_command(command, role)
-    gui_update_command_list()
+    def gui_update_roles_user_menu(self):
+        self.roles_user_menu["menu"].delete(0, END)
+        users = get_users()
+        if users:
+            for user in users:
+                self.roles_user_menu["menu"].add_command(label=user["name"], command=lambda value=user["name"]: self.roles_assignment_user_entry.set(value))
+            self.roles_assignment_user_entry.set(users[0]["name"])
+        else:
+            self.roles_user_menu["menu"].add_command(label="", command=lambda value="": self.roles_assignment_user_entry.set(value))
+            self.roles_assignment_user_entry.set("")
 
-"""
-Creates a phrase in graphical mode.
-"""
+    """
+    Update roles's role assignation menu in graphical mode.
+    """
 
-def gui_create_phrase():
-    language = phrases_language_entry.get()
-    command = phrases_command_entry.get()
-    response = phrases_response_entry.get()
-    phrases = phrases_phrases_text.get("1.0", END)
-    create_phrase(language, command, response, phrases)
+    def gui_update_roles_role_menu(self):
+        self.roles_role_menu["menu"].delete(0, END)
+        roles = get_roles()
+        if roles:
+            for role in roles:
+                self.roles_role_menu["menu"].add_command(label=role["role"], command=lambda value=role["role"]: self.roles_assignment_role_entry.set(value))
+            self.roles_assignment_role_entry.set(roles[0]["role"])
+        else:
+            self.roles_role_menu["menu"].add_command(label="", command=lambda value="": self.roles_assignment_role_entry.set(value))
+            self.roles_assignment_role_entry.set("")
 
-"""
-Removes phrase in graphical mode.
-"""
+    """
+    Update commands's command assignation menu in graphical mode.
+    """
 
-def gui_remove_phrase():
-    language = phrases_language_entry.get()
-    command = phrases_command_entry.get()
-    remove_phrase(language, command)
+    def gui_update_commands_command_menu(self):
+        self.commands_command_menu["menu"].delete(0, END)
+        commands = get_commands()
+        if commands:
+            for command in commands:
+                self.commands_command_menu["menu"].add_command(label=command["description"], command=lambda value=command["command"]: self.commands_assignment_command_entry.set(value))
+            self.commands_assignment_command_entry.set(commands[0]["command"])
+        else:
+            self.commands_command_menu["menu"].add_command(label="", command=lambda value="": self.commands_assignment_command_entry.set(value))
+            self.commands_assignment_command_entry.set("")
+
+    """
+    Update commands's role assignation menu in graphical mode.
+    """
+
+    def gui_update_commands_role_menu(self):
+        self.commands_role_menu["menu"].delete(0, END)
+        roles = get_roles()
+        if roles:
+            for role in roles:
+                self.commands_role_menu["menu"].add_command(label=role["role"], command=lambda value=role["role"]: self.commands_assignment_role_entry.set(value))
+            self.commands_assignment_role_entry.set(roles[0]["role"])
+        else:
+            self.commands_role_menu["menu"].add_command(label="", command=lambda value="": self.commands_assignment_role_entry.set(value))
+            self.commands_assignment_role_entry.set("")
+
+    """
+    Update phrases's command menu in graphical mode.
+    """
+
+    def gui_update_phrases_command_menu(self):
+        self.phrases_command_menu["menu"].delete(0, END)
+        commands = get_commands()
+        if commands:
+            for command in commands:
+                self.phrases_command_menu["menu"].add_command(label=command["description"], command=lambda value=command["command"]: self.phrases_command_entry.set(value))
+            self.phrases_command_entry.set(commands[0]["command"])
+        else:
+            self.phrases_command_menu["menu"].add_command(label="", command=lambda value="": self.phrases_command_entry.set(value))
+            self.phrases_command_entry.set("")
+
+    """
+    Constructs settings.
+    """
+    def __init__(self):
+        super().__init__()
+        self.title("Settings")
+        self.notebook = ttk.Notebook(self)
+        self.notebook.pack(fill=BOTH, expand=True)
+
+        # Rooms
+
+        self.rooms_frame = Frame(self.notebook)
+        self.notebook.add(self.rooms_frame, text="Rooms")
+
+        self.rooms_1_frame = Frame(self.rooms_frame)
+        self.rooms_1_frame.pack(side=TOP, pady=10)
+
+        self.rooms_room_label = Label(self.rooms_1_frame, text="Room")
+        self.rooms_room_label.pack(side=LEFT, padx=10)
+        self.rooms_room_entry = Entry(self.rooms_1_frame)
+        self.rooms_room_entry.pack(side=LEFT, padx=10)
+        self.rooms_create_button = Button(self.rooms_1_frame, text="Create", command=lambda: Config.gui_create_room(self))
+        self.rooms_create_button.pack(side=LEFT, padx=10)
+        self.rooms_remove_button = Button(self.rooms_1_frame, text="Remove", command=lambda: Config.gui_remove_room(self))
+        self.rooms_remove_button.pack(side=LEFT, padx=10)
+
+        self.rooms_2_frame = Frame(self.rooms_frame)
+        self.rooms_2_frame.pack(side=TOP, pady=10)
+
+        self.rooms_list = Listbox(self.rooms_2_frame)        
+        self.rooms_list.pack(side=LEFT, padx=10)
+        Config.gui_update_rooms_list(self)
+
+        # Devices
+
+        self.devices_frame = Frame(self.notebook)
+        self.notebook.add(self.devices_frame, text="Devices")
+
+        self.devices_1_frame = Frame(self.devices_frame)
+        self.devices_1_frame.pack(side=TOP, pady=10)
+
+        self.devices_room_entry = StringVar(self)
+        self.devices_room_menu = OptionMenu(self.devices_1_frame, self.devices_room_entry, "")
+        self.devices_room_menu.pack(side=LEFT, padx=10)
+        Config.gui_update_devices_room_menu(self)
+        self.devices_position_entry = StringVar(self)
+        self.devices_position_entry.set(POSITIONS_IN_ROOM[0])
+        self.devices_position_menu = OptionMenu(self.devices_1_frame, self.devices_position_entry, *POSITIONS_IN_ROOM)
+        self.devices_position_menu.pack(side=LEFT, padx=10)
+        self.devices_create_button = Button(self.devices_1_frame, text="Create", command=lambda: Config.gui_create_device(self))
+        self.devices_create_button.pack(side=LEFT, padx=10)
+        self.devices_remove_button = Button(self.devices_1_frame, text="Remove", command=lambda: Config.gui_remove_device(self))
+        self.devices_remove_button.pack(side=LEFT, padx=10)
+        self.devices_install_button = Button(self.devices_1_frame, text="Install", command=lambda: Config.gui_install_device(self))
+        self.devices_install_button.pack(side=LEFT, padx=10)
+
+        self.devices_2_frame = Frame(self.devices_frame)
+        self.devices_2_frame.pack(side=TOP, pady=10)
+
+        self.devices_list = Listbox(self.devices_2_frame)
+        self.devices_list.pack(side=LEFT, padx=10)
+        Config.gui_update_devices_list(self)
+
+        # Users
+        
+        self.users_frame = Frame(self.notebook)
+        self.notebook.add(self.users_frame, text="Users")
+
+        self.users_1_frame = Frame(self.users_frame)
+        self.users_1_frame.pack(side=TOP, pady=10)
+
+        self.users_name_label = Label(self.users_1_frame, text="Name")
+        self.users_name_label.pack(side=LEFT, padx=10)
+        self.users_name_entry = Entry(self.users_1_frame)
+        self.users_name_entry.pack(side=LEFT, padx=10)
+        self.users_birth_date_label = Label(self.users_1_frame, text="Birth Date")
+        self.users_birth_date_label.pack(side=LEFT, padx=10)
+        self.users_birth_date_entry = Entry(self.users_1_frame)
+        self.users_birth_date_entry.pack(side=LEFT, padx=10)
+        self.users_language_entry = StringVar(self)
+        self.users_language_entry.set(languages[0])
+        self.users_language_menu = OptionMenu(self.users_1_frame, self.users_language_entry, *languages)
+        self.users_language_menu.pack(side=LEFT, padx=10)
+        self.users_create_button = Button(self.users_1_frame, text="Create", command=lambda: Config.gui_create_user(self))
+        self.users_create_button.pack(side=LEFT, padx=10)
+        self.user_remove_button = Button(self.users_1_frame, text="Remove", command=lambda: Config.gui_remove_user(self))
+        self.user_remove_button.pack(side=LEFT, padx=10)
+        
+        self.users_2_frame = Frame(self.users_frame)
+        self.users_2_frame.pack(side=TOP, pady=10)
+        
+        self.users_list = Listbox(self.users_2_frame)
+        self.users_list.pack(side=LEFT, padx=10)
+        Config.gui_update_users_list(self)
+
+        # Roles
+
+        self.roles_frame = Frame(self.notebook)
+        self.notebook.add(self.roles_frame, text="Roles")
+
+        self.roles_1_frame = Frame(self.roles_frame)
+        self.roles_1_frame.pack(side=TOP, pady=10)
+
+        self.roles_role_label = Label(self.roles_1_frame, text="Role")
+        self.roles_role_label.pack(side=LEFT, padx=10)
+        self.roles_role_entry = Entry(self.roles_1_frame)
+        self.roles_role_entry.pack(side=LEFT, padx=10)
+        self.roles_age_restriction_entry = BooleanVar()
+        self.roles_age_restriction_check = Checkbutton(self.roles_1_frame, text="Age Restriction", variable=self.roles_age_restriction_entry)
+        self.roles_age_restriction_check.pack(side=LEFT, padx=10)
+        self.roles_create_button = Button(self.roles_1_frame, text="Create", command=lambda: Config.gui_create_role(self))
+        self.roles_create_button.pack(side=LEFT, padx=10)
+        self.role_remove_button = Button(self.roles_1_frame, text="Remove", command=lambda: Config.gui_remove_role(self))
+        self.role_remove_button.pack(side=LEFT, padx=10)
+
+        self.roles_2_frame = Frame(self.roles_frame)
+        self.roles_2_frame.pack(side=TOP, pady=10)
+
+        self.roles_assignment_role_entry = StringVar(self)
+        self.roles_role_menu = OptionMenu(self.roles_2_frame, self.roles_assignment_role_entry, "")
+        self.roles_role_menu.pack(side=LEFT, padx=10)
+        Config.gui_update_roles_role_menu(self)
+        self.roles_assignment_user_entry = StringVar(self)
+        self.roles_user_menu = OptionMenu(self.roles_2_frame, self.roles_assignment_user_entry, "")
+        self.roles_user_menu.pack(side=LEFT, padx=10)
+        Config.gui_update_roles_user_menu(self)
+        self.roles_assignment_button = Button(self.roles_2_frame, text="Assign", command=lambda: Config.gui_assign_role(self))
+        self.roles_assignment_button.pack(side=LEFT, padx=10)
+        self.roles_deassignment_button = Button(self.roles_2_frame, text="Deassign", command=lambda: Config.gui_deassign_role(self))
+        self.roles_deassignment_button.pack(side=LEFT, padx=10)
+
+        self.roles_3_frame = Frame(self.roles_frame)
+        self.roles_3_frame.pack(side=TOP, pady=10)
+
+        self.roles_list = Listbox(self.roles_3_frame)
+        self.roles_list.pack(side=LEFT, padx=10)
+        Config.gui_update_roles_list(self)
+
+        # Commands
+
+        self.commands_frame = Frame(self.notebook)
+        self.notebook.add(self.commands_frame, text="Commands")
+
+        self.commands_1_frame = Frame(self.commands_frame)
+        self.commands_1_frame.pack(side=TOP, pady=10)
+
+        self.commands_command_label = Label(self.commands_1_frame, text="Command")
+        self.commands_command_label.pack(side=LEFT, padx=10)
+        self.commands_command_entry = Entry(self.commands_1_frame)
+        self.commands_command_entry.pack(side=LEFT, padx=10)
+        self.commands_description_label = Label(self.commands_1_frame, text="Description")
+        self.commands_description_label.pack(side=LEFT, padx=10)
+        self.commands_description_entry = Entry(self.commands_1_frame)
+        self.commands_description_entry.pack(side=LEFT, padx=10)
+        self.commands_local_entry = BooleanVar()
+        self.commands_local_check = Checkbutton(self.commands_1_frame, text="Execute Locally", variable=self.commands_local_entry)
+        self.commands_local_check.pack(side=LEFT, padx=10)
+        self.commands_create_button = Button(self.commands_1_frame, text="Create", command=lambda: Config.gui_create_command(self))
+        self.commands_create_button.pack(side=LEFT, padx=10)
+        self.commands_remove_button = Button(self.commands_1_frame, text="Remove", command=lambda: Config.gui_remove_command(self))
+        self.commands_remove_button.pack(side=LEFT, padx=10)
+
+        self.commands_2_frame = Frame(self.commands_frame)
+        self.commands_2_frame.pack(side=TOP, pady=10)
+
+        self.commands_assignment_command_entry = StringVar(self)
+        self.commands_command_menu = OptionMenu(self.commands_2_frame, self.commands_assignment_command_entry, "")
+        self.commands_command_menu.pack(side=LEFT, padx=10)
+        Config.gui_update_commands_command_menu(self)
+        self.commands_assignment_role_entry = StringVar(self)
+        self.commands_role_menu = OptionMenu(self.commands_2_frame, self.commands_assignment_role_entry, "")
+        self.commands_role_menu.pack(side=LEFT, padx=10)
+        Config.gui_update_commands_role_menu(self)
+        self.commands_assignment_button = Button(self.commands_2_frame, text="Assign", command=lambda: Config.gui_assign_command(self))
+        self.commands_assignment_button.pack(side=LEFT, padx=10)
+        self.commands_deassignment_button = Button(self.commands_2_frame, text="Deassign", command=lambda: Config.gui_deassign_command(self))
+        self.commands_deassignment_button.pack(side=LEFT, padx=10)
+
+        self.commands_3_frame = Frame(self.commands_frame)
+        self.commands_3_frame.pack(side=TOP, pady=10)
+
+        self.commands_list = Listbox(self.commands_3_frame)
+        self.commands_list.pack(side=LEFT, padx=10)
+        Config.gui_update_commands_list(self)
+
+        # Phrases
+
+        self.phrases_frame = Frame(self.notebook)
+        self.notebook.add(self.phrases_frame, text="Phrases")
+
+        self.phrases_1_frame = Frame(self.phrases_frame)
+        self.phrases_1_frame.pack(side=TOP, pady=10)
+
+        self.phrases_command_entry = StringVar(self)
+        self.phrases_command_menu = OptionMenu(self.phrases_1_frame, self.phrases_command_entry, "")
+        self.phrases_command_menu.pack(side=LEFT, padx=10)
+        Config.gui_update_phrases_command_menu(self)
+        self.phrases_language_entry = StringVar(self)
+        self.phrases_language_entry.set(languages[0])
+        self.phrases_language_menu = OptionMenu(self.phrases_1_frame, self.phrases_language_entry, *languages)
+        self.phrases_language_menu.pack(side=LEFT, padx=10)
+        self.phrases_response_label = Label(self.phrases_1_frame, text="Response")
+        self.phrases_response_label.pack(side=LEFT, padx=10)
+        self.phrases_response_entry = Entry(self.phrases_1_frame)
+        self.phrases_response_entry.pack(side=LEFT, padx=10)
+
+        self.phrases_2_frame = Frame(self.phrases_frame)
+        self.phrases_2_frame.pack(side=TOP, pady=10)
+
+        self.phrases_phrases_label = Label(self.phrases_2_frame, text="Phrases")
+        self.phrases_phrases_label.pack(side=LEFT, padx=10)
+        self.phrases_phrases_text = Text(self.phrases_2_frame, width=50, height=10)
+        self.phrases_phrases_text.pack(side=LEFT, padx=10)
+        self.phrases_create_button = Button(self.phrases_2_frame, text="Create", command=lambda: Config.gui_create_phrase(self))
+        self.phrases_create_button.pack(side=LEFT, padx=10)
+        self.phrases_remove_button = Button(self.phrases_2_frame, text="Remove", command=lambda: Config.gui_remove_phrase(self))
+        self.phrases_remove_button.pack(side=LEFT, padx=10)
+
+        self.update_idletasks()
+        self.geometry('{}x{}+{}+{}'.format(self.winfo_width(), self.winfo_height(), (self.winfo_screenwidth() // 2) - (self.winfo_width() // 2), (self.winfo_screenheight() // 2) - (self.winfo_height() // 2)))
 
 """
 Main.
@@ -352,194 +565,8 @@ if __name__ == "__main__":
         exit()
     print(f"{YELLOW}[{DEFAULT}*{YELLOW}]{DEFAULT} {BLUE}Starting settings...{DEFAULT}")
     try:
-        root = Tk()
-        root.attributes("-zoomed", True)
-        root.title("Settings")
-        canvas = Canvas(root)
-        canvas.pack(side=LEFT, fill=BOTH, expand=True)
-        scrollbar = Scrollbar(root, orient=VERTICAL, command=canvas.yview)
-        scrollbar.pack(side=RIGHT, fill=Y)
-        canvas.configure(yscrollcommand=scrollbar.set)
-        root_frame = Frame(canvas)
-        canvas.create_window((0, 0), window=root_frame, anchor=N+W)
-
-        rooms_devices_frame = LabelFrame(root_frame, text="Rooms & Devices", padx=5, pady=5)
-        rooms_devices_frame.pack(side=TOP, padx=10, pady=10)
-
-        rooms_frame = LabelFrame(rooms_devices_frame, padx=5, pady=5)
-        rooms_frame.pack(side=TOP, pady=10)
-
-        rooms_room_label = Label(rooms_frame, text="Room")
-        rooms_room_label.pack(side=LEFT, padx=10)
-        rooms_room_entry = Entry(rooms_frame)
-        rooms_room_entry.pack(side=LEFT, padx=10)
-        rooms_create_button = Button(rooms_frame, text="Create Room", command=gui_create_room)
-        rooms_create_button.pack(side=LEFT, padx=10)
-        rooms_remove_button = Button(rooms_frame, text="Remove Room", command=gui_remove_room)
-        rooms_remove_button.pack(side=LEFT, padx=10)
-        rooms_devices_list = Listbox(rooms_frame)        
-        rooms_devices_list.pack(side=LEFT, padx=10)
-        gui_update_rooms_devices_list()
-
-        devices_frame = LabelFrame(rooms_devices_frame, padx=5, pady=5)
-        devices_frame.pack(side=TOP, pady=10)
-
-        devices_room_entry = StringVar(root_frame)
-        devices_room_menu = OptionMenu(devices_frame, devices_room_entry, "")
-        devices_room_menu.pack(side=LEFT, padx=10)
-        gui_update_devices_room_menu()
-        devices_position_entry = StringVar(root_frame)
-        devices_position_entry.set(POSITIONS_IN_ROOM[0])
-        devices_position_menu = OptionMenu(devices_frame, devices_position_entry, *POSITIONS_IN_ROOM)
-        devices_position_menu.pack(side=LEFT, padx=10)
-        devices_create_button = Button(devices_frame, text="Create Device", command=gui_create_device)
-        devices_create_button.pack(side=LEFT, padx=10)
-        devices_remove_button = Button(devices_frame, text="Remove Device", command=gui_remove_device)
-        devices_remove_button.pack(side=LEFT, padx=10)
-        devices_install_button = Button(devices_frame, text="Install Device", command=gui_install_device)
-        devices_install_button.pack(side=LEFT, padx=10)
-
-        users_roles_frame = LabelFrame(root_frame, text="Users & Roles", padx=5, pady=5)
-        users_roles_frame.pack(side=TOP, padx=10, pady=10)
-
-        users_frame = LabelFrame(users_roles_frame, padx=5, pady=5)
-        users_frame.pack(side=TOP, pady=10)
-
-        users_name_label = Label(users_frame, text="Name")
-        users_name_label.pack(side=LEFT, padx=10)
-        users_name_entry = Entry(users_frame)
-        users_name_entry.pack(side=LEFT, padx=10)
-        users_birth_date_label = Label(users_frame, text="Birth Date")
-        users_birth_date_label.pack(side=LEFT, padx=10)
-        users_birth_date_entry = Entry(users_frame)
-        users_birth_date_entry.pack(side=LEFT, padx=10)
-        users_language_entry = StringVar(root_frame)
-        users_language_entry.set(languages[0])
-        users_language_menu = OptionMenu(users_frame, users_language_entry, *languages)
-        users_language_menu.pack(side=LEFT, padx=10)
-        users_create_button = Button(users_frame, text="Create User", command=gui_create_user)
-        users_create_button.pack(side=LEFT, padx=10)
-        user_remove_button = Button(users_frame, text="Remove User", command=gui_remove_user)
-        user_remove_button.pack(side=LEFT, padx=10)
-        users_list = Listbox(users_frame)
-        users_list.pack(side=LEFT, padx=10)
-        gui_update_users_list()
-
-        roles_frame = Frame(users_roles_frame)
-        roles_frame.pack(side=TOP, pady=10)
-
-        roles_1_frame = LabelFrame(roles_frame, padx=5, pady=5)
-        roles_1_frame.pack(side=TOP, pady=10)
-
-        roles_role_label = Label(roles_1_frame, text="Role")
-        roles_role_label.pack(side=LEFT, padx=10)
-        roles_role_entry = Entry(roles_1_frame)
-        roles_role_entry.pack(side=LEFT, padx=10)
-        roles_age_restriction_entry = BooleanVar()
-        roles_age_restriction_check = Checkbutton(roles_1_frame, text="Age Restriction", variable=roles_age_restriction_entry)
-        roles_age_restriction_check.pack(side=LEFT, padx=10)
-        roles_create_button = Button(roles_1_frame, text="Create Role", command=gui_create_role)
-        roles_create_button.pack(side=LEFT, padx=10)
-        role_remove_button = Button(roles_1_frame, text="Remove Role", command=gui_remove_role)
-        role_remove_button.pack(side=LEFT, padx=10)
-
-        roles_2_frame = LabelFrame(roles_frame, padx=5, pady=5)
-        roles_2_frame.pack(side=TOP, pady=10)
-
-        roles_users_role_entry = StringVar(root_frame)
-        roles_users_role_menu = OptionMenu(roles_2_frame, roles_users_role_entry, "")
-        roles_users_role_menu.pack(side=LEFT, padx=10)
-        gui_update_roles_users_role_menu()
-        roles_users_user_entry = StringVar(root_frame)
-        roles_users_user_menu = OptionMenu(roles_2_frame, roles_users_user_entry, "")
-        roles_users_user_menu.pack(side=LEFT, padx=10)
-        gui_update_roles_users_user_menu()
-        roles_assignment_button = Button(roles_2_frame, text="Assign role", command=gui_assign_role)
-        roles_assignment_button.pack(side=LEFT, padx=10)
-        roles_deassignment_button = Button(roles_2_frame, text="Deassign role", command=gui_deassign_role)
-        roles_deassignment_button.pack(side=LEFT, padx=10)
-        roles_list = Listbox(roles_2_frame)
-        roles_list.pack(side=LEFT, padx=10)
-        gui_update_roles_list()
-
-        commands_phrases_frame = LabelFrame( root_frame, text="Commands & Phrases", padx=5, pady=5)
-        commands_phrases_frame.pack(side=TOP, padx=10, pady=10)
-
-        commands_frame = Frame(commands_phrases_frame)
-        commands_frame.pack(side=TOP, pady=10)
-
-        commands_1_frame = LabelFrame(commands_frame, padx=5, pady=5)
-        commands_1_frame.pack(side=TOP, pady=10)
-
-        commands_command_label = Label(commands_1_frame, text="Command")
-        commands_command_label.pack(side=LEFT, padx=10)
-        commands_command_entry = Entry(commands_1_frame)
-        commands_command_entry.pack(side=LEFT, padx=10)
-        commands_description_label = Label(commands_1_frame, text="Description")
-        commands_description_label.pack(side=LEFT, padx=10)
-        commands_description_entry = Entry(commands_1_frame)
-        commands_description_entry.pack(side=LEFT, padx=10)
-        commands_local_entry = BooleanVar()
-        commands_local_check = Checkbutton(commands_1_frame, text="Execute Locally", variable=commands_local_entry)
-        commands_local_check.pack(side=LEFT, padx=10)
-        commands_create_button = Button(commands_1_frame, text="Create Command", command=gui_create_command)
-        commands_create_button.pack(side=LEFT, padx=10)
-        commands_remove_button = Button(commands_1_frame, text="Remove Command", command=gui_remove_command)
-        commands_remove_button.pack(side=LEFT, padx=10)
-
-        commands_2_frame = LabelFrame(commands_frame, padx=5, pady=5)
-        commands_2_frame.pack(side=TOP, pady=10)
-
-        commands_roles_command_entry = StringVar(root_frame)
-        commands_roles_command_menu = OptionMenu(commands_2_frame, commands_roles_command_entry, "")
-        commands_roles_command_menu.pack(side=LEFT, padx=10)
-        gui_update_commands_roles_command_menu()
-        commands_roles_role_entry = StringVar(root_frame)
-        commands_roles_role_menu = OptionMenu(commands_2_frame, commands_roles_role_entry, "")
-        commands_roles_role_menu.pack(side=LEFT, padx=10)
-        gui_update_commands_roles_role_menu()
-        commands_assignment_button = Button(commands_2_frame, text="Assign command", command=gui_assign_command)
-        commands_assignment_button.pack(side=LEFT, padx=10)
-        commands_deassignment_button = Button(commands_2_frame, text="Deassign command", command=gui_deassign_command)
-        commands_deassignment_button.pack(side=LEFT, padx=10)
-        commands_list = Listbox(commands_2_frame)
-        commands_list.pack(side=LEFT, padx=10)
-        gui_update_command_list()
-
-        phrases_frame = LabelFrame(commands_phrases_frame, padx=5, pady=5)
-        phrases_frame.pack(side=TOP, pady=10)
-
-        phrases_1_frame = Frame(phrases_frame)
-        phrases_1_frame.pack(side=TOP, pady=10)
-
-        phrases_command_entry = StringVar(root_frame)
-        phrases_command_menu = OptionMenu(phrases_1_frame, phrases_command_entry, "")
-        phrases_command_menu.pack(side=LEFT, padx=10)
-        gui_update_phrases_command_menu()
-        phrases_language_entry = StringVar(root_frame)
-        phrases_language_entry.set(languages[0])
-        phrases_language_menu = OptionMenu(phrases_1_frame, phrases_language_entry, *languages)
-        phrases_language_menu.pack(side=LEFT, padx=10)
-        phrases_response_label = Label(phrases_1_frame, text="Response")
-        phrases_response_label.pack(side=LEFT, padx=10)
-        phrases_response_entry = Entry(phrases_1_frame)
-        phrases_response_entry.pack(side=LEFT, padx=10)
-
-        phrases_2_frame = Frame(phrases_frame)
-        phrases_2_frame.pack(side=TOP, pady=10)
-
-        phrases_phrases_label = Label(phrases_2_frame, text="Phrases")
-        phrases_phrases_label.pack(side=LEFT, padx=10)
-        phrases_phrases_text = Text(phrases_2_frame, width=50, height=10)
-        phrases_phrases_text.pack(side=LEFT, padx=10)
-        phrases_create_button = Button(phrases_2_frame, text="Create Phrase", command=gui_create_phrase)
-        phrases_create_button.pack(side=LEFT, padx=10)
-        phrases_remove_button = Button(phrases_2_frame, text="Remove Phrase", command=gui_remove_phrase)
-        phrases_remove_button.pack(side=LEFT, padx=10)
-
-        root_frame.update_idletasks()
-        canvas.config(scrollregion=canvas.bbox(ALL))
-        root.mainloop()
-        print(f"{YELLOW}[{DEFAULT}*{YELLOW}]{DEFAULT} {BLUE}Exiting settings...{DEFAULT}")
+        Config().mainloop()
     except KeyboardInterrupt:
-        print(f"{YELLOW}[{DEFAULT}*{YELLOW}]{DEFAULT} {BLUE}Exiting settings...{DEFAULT}")
+        pass
+    print(f"{YELLOW}[{DEFAULT}*{YELLOW}]{DEFAULT} {BLUE}Exiting settings...{DEFAULT}")
+    exit()
