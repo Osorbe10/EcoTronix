@@ -1,5 +1,5 @@
 from calendar import timegm
-from constants import BLUE, CONFIG_FILE, CONFIG_PATH, DATE_FORMAT, DEFAULT, ENCODED_FACES_EXTENSION, ENCODED_FACES_PATH, FACES_EXTENSION, FACES_PATH, GREEN, RED
+from Common.constants import BLUE, CONFIG_FILE, CONFIG_PATH, DATE_FORMAT, DEFAULT, ENCODED_FACES_EXTENSION, ENCODED_FACES_PATH, FACES_EXTENSION, FACES_PATH, GREEN, RED
 from cv2 import CAP_V4L2, imwrite, VideoCapture
 from datetime import datetime
 from face_recognition import face_encodings, load_image_file
@@ -87,14 +87,11 @@ def get_user(name):
 Creates a user.
 @param name: Name
 @param birth_date: Birth date
-@param language: Language
 @returns: True if the user was created. False if name or birth date are incomplete or incorrect, user is existing, photo could not be stored or face could not be detected
 """
 
-def create_user(name, birth_date, language):
-    if not name_format(name):
-        return False
-    if not birth_date_format(birth_date):
+def create_user(name, birth_date):
+    if not name_format(name) or not birth_date_format(birth_date):
         return False
     config_user = get_user(name)
     if config_user:
@@ -115,7 +112,7 @@ def create_user(name, birth_date, language):
     save(ENCODED_FACES_PATH + timestamp + ENCODED_FACES_EXTENSION, face_encoding)
     with open(CONFIG_PATH + CONFIG_FILE, "r+") as config_file:
         config = load(config_file)
-        config["users"].append({"name": name.strip(), "birth_date": birth_date.strip(), "language": language.strip(), "face": timestamp.strip()})
+        config["users"].append({"name": name.strip(), "birth_date": birth_date.strip(), "face": timestamp.strip()})
         config_file.seek(0)
         dump(config, config_file, indent=4)
     print(f"{GREEN}[{DEFAULT}+{GREEN}]{DEFAULT} {BLUE}User created{DEFAULT}")
@@ -151,7 +148,7 @@ def remove_user(name):
 
 """
 Deassigns roles from user.
-@param name: User name
+@param name: Name
 """
 
 def deassign_roles(name):
@@ -177,7 +174,7 @@ def age(birth_date):
 
 """
 Gets existing users.
-@returns: A dictionary with name, age, language and face image name for each user. False if there are no users
+@returns: A dictionary with name, age and face image name for each user. False if there are no users
 """
 
 def get_users():
@@ -185,4 +182,4 @@ def get_users():
         config = load(config_file)
         if len(config["users"]) == 0:
             return False
-        return [{"name": config_user["name"], "age": age(config_user["birth_date"]), "language": config_user["language"], "face": config_user["face"]} for config_user in config["users"]]
+        return [{"name": config_user["name"], "age": age(config_user["birth_date"]), "face": config_user["face"]} for config_user in config["users"]]

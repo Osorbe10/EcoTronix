@@ -1,8 +1,11 @@
 {
-  "rooms": [],
-  "users": [],
-  "roles": [],
-  "commands": [],
-  "languages": [],
-  "mqtt": {}
+    "positions": [],
+    "rooms": [],
+    "users": [],
+    "roles": [],
+    "commands": {
+        "local": [],
+        "remote": []
+    },
+    "languages": []
 }

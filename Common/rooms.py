@@ -1,4 +1,4 @@
-from constants import BLUE, CONFIG_FILE, CONFIG_PATH, DEFAULT, GREEN, RED
+from Common.constants import BLUE, CONFIG_FILE, CONFIG_PATH, DEFAULT, GREEN, RED
 from json import dump, load
 
 """
@@ -75,7 +75,7 @@ def remove_room(room):
 
 """
 Gets existing rooms.
-@returns: A dictionary with room and devices for each room. False if there are no rooms
+@returns: A list with rooms. False if there are no rooms
 """
 
 def get_rooms():
@@ -83,4 +83,4 @@ def get_rooms():
         config = load(config_file)
         if len(config["rooms"]) == 0:
             return False
-        return [{"room": config_room["room"], "devices": config_room["devices"]} for config_room in config["rooms"]]
+        return [config_room["room"] for config_room in config["rooms"]]

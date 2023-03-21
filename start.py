@@ -1,20 +1,23 @@
 #!/usr/bin/env python3
 
 from chime import info, success, warning
-from constants import BLUE, CONFIG_FILE, CONFIG_PATH, DEFAULT, ENCODED_FACES_EXTENSION, ENCODED_FACES_PATH, GREEN, LANGUAGES_PATH, RED, YELLOW
+from Common.commands import get_command, get_local_command, get_remote_command
+from Common.constants import BLUE, COMMAND_TIMEOUT, DEFAULT, ENCODED_FACES_EXTENSION, ENCODED_FACES_PATH, GREEN, LANGUAGES_PATH, RED, YELLOW
+from Common.devices import get_devices
+from Common.languages import get_default_language_paths
+from Common.users import get_users
 from contextlib import contextmanager
 from cv2 import CAP_V4L2, resize, VideoCapture
 from face_recognition import compare_faces, face_distance, face_encodings, face_locations
-from json import load as json_load
-from languages import get_language_paths
 from numpy import argmin, load as numpy_load
 from os import devnull, path
-from paho.mqtt.client import Client
+from paho.mqtt.client import Client, MQTTv5
 from pocketsphinx import Config, Decoder
 from pyaudio import paInt16, PyAudio
-from roles import get_user_roles
+from socket import gethostname
 from subprocess import Popen
-from threading import Event, Thread
+from threading import Event, Lock, Thread
+from time import sleep, time
 
 """
 Removes alsa lib irrelevant errors.
@@ -36,90 +39,130 @@ def alsa_error():
         os.close(old_stderr)
 
 """
-Check if user is allowed to run command.
-@param user: User
-@param command: Command
-@returns: True if user is allowed to run command. False if not
+Pending commands structure.
 """
 
-def has_privileges(user, command):
-    with open(CONFIG_PATH + CONFIG_FILE, "r") as config_file:
-        config = json_load(config_file)
-        for config_command in config["commands"]:
-            if command == config_command["command"]:
-                for role in config_command["roles"]:
-                    if role in get_user_roles(user):
-                        return True
+class PendingCommands:
+
+    """
+    Constructs pending commands structure.
+    """
+
+    def __init__(self):
+        self.pending_commands = []
+        self.lock = Lock()
+        self.t_pending_commands = Thread(target=self.remove_timed_out)
+        self.t_pending_commands.daemon = True
+        self.t_pending_commands.start()
+
+    """
+    Add a pending command.
+    @param config_command: Command
+    @param language: Language
+    """
+
+    def append(self, config_command, language):
+        with self.lock:
+            self.pending_commands.append((config_command, language, time()))
+
+    """
+    Get a pending command.
+    @param index: Index
+    @returns: A tuple with command and language
+    """
+
+    def get(self, index):
+        with self.lock:
+            return (self.pending_commands[index][0], self.pending_commands[index][1])
+
+    """
+    Delete a pending command.
+    @param index: Index
+    """
+
+    def remove(self, index):
+        with self.lock:
+            del self.pending_commands[index]
+
+    """
+    Count pending command.
+    @returns: Pending command count
+    """
+
+    def len(self):
+        with self.lock:
+            return len(self.pending_commands)
+
+    """
+    Delete timed out pending command.
+    """
+
+    def remove_timed_out(self):
+        while True:
+            sleep(COMMAND_TIMEOUT)
+            with self.lock:
+                current_time = time()
+                self.pending_commands = [(config_command, language, timestamp) for config_command, language, timestamp in self.pending_commands if current_time - timestamp < COMMAND_TIMEOUT]
+
+"""
+Executes a command.
+@param config_command: Command
+@param language: Language
+"""
+
+def execute(config_command, language):
+    global client
+    if "command" in config_command:
+        command = config_command["command"]
+        response = config_command["response"]
+        Popen(command, shell=True)
+        Popen(f"espeak -s 150 \"{response}\" -v {language} >{devnull} 2>&1", shell=True)
+        print(f"{GREEN}[{DEFAULT}+{GREEN}]{DEFAULT} {BLUE}Executed: {command}{DEFAULT}")
+    elif "peripheral" in config_command and "subtype" in config_command and "action" in config_command and "room" in config_command and "position" in config_command:
+        peripheral = config_command["peripheral"]
+        subtype = config_command["subtype"]
+        action = config_command["action"]
+        room = config_command["room"]
+        position = config_command["position"]
+        response = config_command["response"]
+        client.publish(path.join(room.lower().replace(" ", "_"), position.lower().replace(" ", "_"), peripheral.lower().replace(" ", "_"), subtype.lower().replace(" ", "_")), payload=action, qos=1)
+        Popen(f"espeak -s 150 \"{response}\" -v {language} >{devnull} 2>&1", shell=True)
+        print(f"{GREEN}[{DEFAULT}+{GREEN}]{DEFAULT} {BLUE}Executed: " + "/".join((room, position, peripheral, subtype)) + (" " + action if action else "") + f"{DEFAULT}")
+
+"""
+Checks if a command is allowed.
+@param command: Command
+@returns: True if command is allowed. False if not
+"""
+
+def permissions(config_command):
+    if not config_command["age_restriction"] and not config_command["privileged"]:
+        return True
     return False
 
 """
-Launch desired user action if is allowed.
+Launch desired action if is allowed.
 @param phrase: Phrase
 @param language: Phrase language
-@param user_name: User name
 """
 
-def launch_action(phrase, language, user_name):
-    with open(CONFIG_PATH + CONFIG_FILE, "r") as config_file:
-        config = json_load(config_file)
-        for config_language in config["languages"]:
-            if language == config_language["language"]:
-                for config_phrase in config_language["phrases"]:
-                    if phrase in config_phrase["phrases"]:
-                        command = config_phrase["command"]
-                        response = config_phrase["response"]
-                        if has_privileges(user_name, command):
-                            info()
-                            espeak = f"espeak -s 150 \"{response}\" -v {language} >{devnull} 2>&1"
-                            Popen(command, shell=True)
-                            Popen(espeak, shell=True)
-                            print(f"{GREEN}[{DEFAULT}+{GREEN}]{DEFAULT} {BLUE}Launched: {command}{DEFAULT}")
-                        else:
-                            warning()
-                            print(f"{RED}[{DEFAULT}-{RED}]{DEFAULT} {BLUE}Not allowed to launch command{DEFAULT}")
-
-"""
-Returns users data.
-@returns: Encoded face, name and language for each user. False if there are no users
-"""
-
-def get_users():
-    encoded_faces, names, languages = [], [], []
-    with open(CONFIG_PATH + CONFIG_FILE, "r") as config_file:
-        config = json_load(config_file)
-        for user in config["users"]:
-            names.append(user["name"])
-            languages.append(user["language"])
-            encoded_faces.append(numpy_load(ENCODED_FACES_PATH + user["face"] + ENCODED_FACES_EXTENSION))
-        if len(names) == 0:
-            print(f"{RED}[{DEFAULT}-{RED}]{DEFAULT} {BLUE}No users found{DEFAULT}")
-            return False
-    return (encoded_faces, names, languages)
-
-"""
-Connects to MQTT broker.
-@param client: MQTT client
-"""
-
-def start_mqtt(client):
-    client = Client()
-    with open(CONFIG_PATH + CONFIG_FILE, "r") as config_file:
-        mqtt_config = json_load(config_file)["mqtt"]
-        client.username_pw_set(mqtt_config["username"], password=mqtt_config["password"])
-        client.connect(mqtt_config["host"], mqtt_config["port"])
-    client.loop_start()
+def action(phrase, language):
+    config_command = get_command(phrase, language)
+    if permissions(config_command):
+        info()
+        execute(config_command, language)
+    else:
+        warning()
+        pending_commands.append(config_command, language)
+        print(f"{RED}[{DEFAULT}-{RED}]{DEFAULT} {BLUE}Will be executed when it has sufficient permissions{DEFAULT}")
 
 """
 Runs speech recognition until stop event is set.
-@param user_name: User name
-@param language: Language
-@param hmm_path: Hidden Markov Model path
-@param dic_path: Dictionary path
-@param kws_path: Keyword Spotting path
 @param stop: Stop event
 """
 
-def speech_recognition(user_name, language, hmm_path, dic_path, kws_path, stop):
+def speech_recognition(stop):
+    language, hmm_path, dic_path, kws_path = language_paths
     config = Config(lm=None, hmm=path.join(LANGUAGES_PATH, language, hmm_path), dict=path.join(LANGUAGES_PATH, language, dic_path), kws=path.join(LANGUAGES_PATH, language, kws_path), logfn=devnull)
     decoder = Decoder(config)
     decoder.start_utt()
@@ -134,77 +177,166 @@ def speech_recognition(user_name, language, hmm_path, dic_path, kws_path, stop):
             if decoder.hyp() is not None:
                 phrase = decoder.hyp().hypstr.strip()
                 print(f"{YELLOW}[{DEFAULT}*{YELLOW}]{DEFAULT} {BLUE}You said: {DEFAULT}{phrase}")
-                launch_action(phrase, language, user_name)
+                action(phrase, language)
                 decoder.end_utt()
                 decoder.start_utt()
         else:
             print(f"{RED}[{DEFAULT}-{RED}]{DEFAULT} {BLUE}Cannot process audio...{DEFAULT}")
             break
-    print(f"{YELLOW}[{DEFAULT}*{YELLOW}]{DEFAULT} {BLUE}Stopping {language} speech...{DEFAULT}")
     decoder.end_utt()
     stream.close()
 
 """
-Runs face recognition until is forcibly stopped.
+Runs face recognition until stop event is set.
+@param stop: Stop event
 """
 
-def face_recognition():
-    t_speech, client = None, None
-    stop = Event()
-    try:
-        print(f"{YELLOW}[{DEFAULT}*{YELLOW}]{DEFAULT} {BLUE}Starting EcoTronix...{DEFAULT}")
-        users = get_users()
-        if users:
-            encoded_faces, names, languages = users
-            process_frame = True
-            user_name = ""
-            camera = VideoCapture(CAP_V4L2)
-            print(f"{YELLOW}[{DEFAULT}*{YELLOW}]{DEFAULT} {BLUE}Reading faces...{DEFAULT}")
-            while True:
-                returned, frame = camera.read()
-                if not returned:
-                    camera.release()
-                    print(f"{RED}[{DEFAULT}-{RED}]{DEFAULT} {BLUE}Unable to read camera{DEFAULT}")
-                    break
-                if process_frame:
-                    rgb_small_frame = resize(frame, (0, 0), fx=0.25, fy=0.25)[:, :, ::-1]
-                    found_faces = face_locations(rgb_small_frame)
-                    encoded_found_faces = face_encodings(rgb_small_frame, found_faces)
-                    for encoded_face in encoded_found_faces:
-                        best_match_index = argmin(face_distance(encoded_faces, encoded_face))
-                        if compare_faces(encoded_faces, encoded_face)[best_match_index]:
-                            name = names[best_match_index]
-                            if user_name != name:
-                                language = languages[best_match_index]
-                                language_paths = get_language_paths(language)
-                                if language_paths:
-                                    success()
-                                    print(f"{YELLOW}[{DEFAULT}*{YELLOW}]{DEFAULT} {BLUE}Loading {name} profile...{DEFAULT}")
-                                    hmm_path, dic_path, kws_path = language_paths
-                                    user_name = name
-                                    if t_speech is not None:
-                                        stop.set()
-                                        t_speech.join()
-                                        stop.clear()
-                                    if client is not None:
-                                        client.disconnect()
-                                    start_mqtt(client)
-                                    t_speech = Thread(target=speech_recognition, args=(user_name, language, hmm_path, dic_path, kws_path, stop))
-                                    t_speech.start()
-                process_frame = not process_frame
-        print(f"{YELLOW}[{DEFAULT}*{YELLOW}]{DEFAULT} {BLUE}Finishing EcoTronix...{DEFAULT}")
-    except KeyboardInterrupt:
-        if t_speech is not None:
-            stop.set()
-            t_speech.join()
-            stop.clear()
-        if client is not None:
-            client.disconnect()
-        print(f"{YELLOW}[{DEFAULT}*{YELLOW}]{DEFAULT} {BLUE}Exiting EcoTronix...{DEFAULT}")
+def face_recognition(stop):
+    names, encoded_faces = [], []
+    for user in users:
+        names.append(user["name"])
+        encoded_faces.append(numpy_load(ENCODED_FACES_PATH + user["face"] + ENCODED_FACES_EXTENSION))
+    process_frame = True
+    last_user = ""
+    camera = VideoCapture(CAP_V4L2)
+    print(f"{YELLOW}[{DEFAULT}*{YELLOW}]{DEFAULT} {BLUE}Reading faces...{DEFAULT}")
+    while not stop.is_set():
+        returned, frame = camera.read()
+        if not returned:
+            camera.release()
+            print(f"{RED}[{DEFAULT}-{RED}]{DEFAULT} {BLUE}Unable to read camera{DEFAULT}")
+            break
+        if process_frame:
+            rgb_small_frame = resize(frame, (0, 0), fx=0.25, fy=0.25)[:, :, ::-1]
+            found_faces = face_locations(rgb_small_frame)
+            encoded_found_faces = face_encodings(rgb_small_frame, found_faces)
+            for encoded_face in encoded_found_faces:
+                best_match_index = argmin(face_distance(encoded_faces, encoded_face))
+                if compare_faces(encoded_faces, encoded_face)[best_match_index]:
+                    name = names[best_match_index]
+                    if last_user != name:
+                        success()
+                        print(f"{YELLOW}[{DEFAULT}*{YELLOW}]{DEFAULT} {BLUE}Loading {name} profile...{DEFAULT}")
+                        last_user = name
+                        for index in range(pending_commands.len()):
+                            pending_command = pending_commands.get(index - 1)
+                            pending_commands.remove(index - 1)
+                            info()
+                            execute(pending_command[0], pending_command[1])
+        process_frame = not process_frame
+    camera.release()
+
+# setting callbacks for different events to see if it works, print the message etc.
+def on_connect(client, userdata, flags, rc, properties=None):
+    """
+        Prints the result of the connection with a reasoncode to stdout ( used as callback for connect )
+        :param client: the client itself
+        :param userdata: userdata is set when initiating the client, here it is userdata=None
+        :param flags: these are response flags sent by the broker
+        :param rc: stands for reasonCode, which is a code for the connection result
+        :param properties: can be used in MQTTv5, but is optional
+    """
+    print("CONNACK received with code %s." % rc)
+
+
+# with this callback you can see if your publish was successful
+def on_publish(client, userdata, mid, properties=None):
+    """
+        Prints mid to stdout to reassure a successful publish ( used as callback for publish )
+        :param client: the client itself
+        :param userdata: userdata is set when initiating the client, here it is userdata=None
+        :param mid: variable returned from the corresponding publish() call, to allow outgoing messages to be tracked
+        :param properties: can be used in MQTTv5, but is optional
+    """
+    print("mid: " + str(mid))
+
+
+# print which topic was subscribed to
+def on_subscribe(client, userdata, mid, granted_qos, properties=None):
+    """
+        Prints a reassurance for successfully subscribing
+        :param client: the client itself
+        :param userdata: userdata is set when initiating the client, here it is userdata=None
+        :param mid: variable returned from the corresponding publish() call, to allow outgoing messages to be tracked
+        :param granted_qos: this is the qos that you declare when subscribing, use the same one for publishing
+        :param properties: can be used in MQTTv5, but is optional
+    """
+    print("Subscribed: " + str(mid) + " " + str(granted_qos))
+
+
+# print message, useful for checking if it was successful
+def on_message(client, userdata, msg):
+    """
+        Prints a mqtt message to stdout ( used as callback for subscribe )
+        :param client: the client itself
+        :param userdata: userdata is set when initiating the client, here it is userdata=None
+        :param msg: the message with topic and payload
+    """
+    print(msg.topic + " " + str(msg.qos) + " " + str(msg.payload))
+
+"""
+Connects to MQTT broker.
+@param client: MQTT client
+@returns: True if MQTT client is connected. False if not
+"""
+
+def start_mqtt():
+    global client
+    client = Client(protocol=MQTTv5)
+    client.on_connect = on_connect
+    try:   
+        client.connect(gethostname())
+    except ConnectionRefusedError:
+        return False
+    client.on_subscribe = on_subscribe
+    client.on_message = on_message
+    client.on_publish = on_publish
+    for device in get_devices():
+        if device["installed"]:
+            client.subscribe(path.join(device["room"].lower().replace(" ", "_"), device["position"].lower().replace(" ", "_"), "#"), qos=1)
+    client.publish("kitchen/entrance/berryclip_led/red", payload="on", qos=1)
+    client.publish("kitchen/entrance/berryclip_led/yellow", payload="on", qos=1)
+    client.publish("kitchen/entrance/berryclip_buzzer", qos=1)
+    client.publish("kitchen/entrance/integrated_led", payload="on", qos=1)
+    client.publish("kitchen/entrance/get_integrated_led", qos=1)
+    client.publish("kitchen/entrance/get_internal_temperature", qos=1)
+    client.loop_start()
+    return True
 
 """
 Main.
 """
 
 if __name__ == "__main__":
-    face_recognition()
+    try:
+        users = get_users()
+        if not users:
+            print(f"{RED}[{DEFAULT}-{RED}]{DEFAULT} {BLUE}No users found{DEFAULT}")
+            exit()
+        language_paths = get_default_language_paths()
+        if not language_paths:
+            print(f"{RED}[{DEFAULT}-{RED}]{DEFAULT} {BLUE}No languages found{DEFAULT}")
+            exit()
+        print(f"{YELLOW}[{DEFAULT}*{YELLOW}]{DEFAULT} {BLUE}Starting EcoTronix...{DEFAULT}")
+        client, t_face, t_speech, stop = None, None, None, None
+        if not start_mqtt():
+            print(f"{RED}[{DEFAULT}-{RED}]{DEFAULT} {BLUE}Cannot connect to MQTT broker{DEFAULT}")
+            exit()
+        pending_commands = PendingCommands()
+        stop = Event()
+        t_face = Thread(target=face_recognition, args=(stop,))
+        t_speech = Thread(target=speech_recognition, args=(stop,))
+        t_face.start()
+        t_speech.start()
+        stop.wait()
+    except KeyboardInterrupt:
+        if stop is not None:
+            stop.set()
+        if t_speech is not None:
+            t_speech.join()
+        if t_face is not None:
+            t_face.join()
+        if client is not None:
+            client.disconnect()
+    print(f"{YELLOW}[{DEFAULT}*{YELLOW}]{DEFAULT} {BLUE}Exiting EcoTronix...{DEFAULT}")
+    exit()

@@ -50,8 +50,8 @@ tty=$(diff Pico/old.tmp Pico/new.tmp | tail -n 1 | cut -d " " -f 2)
 rm Pico/old.tmp Pico/new.tmp
 echo -ne "${YELLOW}[${DEFAULT}*${YELLOW}]${DEFAULT} ${BLUE}Copying codes...${DEFAULT}\n"
 rshell --buffer-size 512 -p ${tty} rm -r /pyboard/* >/dev/null 2>&1
-#rshell --buffer-size 512 -p ${tty} cp Pico/Codes/start.py /pyboard >/dev/null 2>&1
-#rshell --buffer-size 512 -p ${tty} cp Pico/Codes/config.py /pyboard >/dev/null 2>&1
+rshell --buffer-size 512 -p ${tty} cp Pico/Codes/start.py /pyboard >/dev/null 2>&1
+rshell --buffer-size 512 -p ${tty} cp Pico/Codes/config.py /pyboard >/dev/null 2>&1
 rshell --buffer-size 512 -p ${tty} cp -r Pico/Codes/umqtt /pyboard >/dev/null 2>&1
 echo -ne "${GREEN}[${DEFAULT}+${GREEN}]${DEFAULT} ${BLUE}Codes copied${DEFAULT}\n"
 

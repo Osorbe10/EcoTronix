@@ -12,6 +12,7 @@ Low Cost Interactive Home Automation Prototype
 
     Optional
 
+        - Raspberry Pi Pico W (As many as you want)
         - Speaker [USB] or [MiniJack 3,5 mm]
 
 ## Installation
@@ -20,10 +21,8 @@ Open a terminal in the directory where you want to download the project and past
 
 ```bash
 sudo apt-get update && sudo apt-get upgrade -y && sudo apt autoremove -y
-sudo apt-get install git -y
-git clone https://github.com/Osorbe10/EcoTronix.git
-cd EcoTronix
-sudo chmod +x install.sh
+sudo apt install git -y && git clone https://github.com/Osorbe10/EcoTronix.git
+cd EcoTronix && sudo chmod +x install.sh
 sudo ./install.sh
 ```
 

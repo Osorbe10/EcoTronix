@@ -1,6 +1,7 @@
-from constants import BLUE, CONFIG_FILE, CONFIG_PATH, DEFAULT, GREEN, PICO_PATH, PICO_SETUP, POSITIONS_IN_ROOM, RED
+from Common.constants import BLUE, CONFIG_FILE, CONFIG_PATH, DEFAULT, GREEN, PICO_PATH, PICO_SETUP, RED
+from Common.positions import position_format
+from Common.rooms import get_room, room_format
 from json import dump, load
-from rooms import get_room, room_format
 from subprocess import call
 
 """
@@ -19,15 +20,12 @@ def get_device(config_room, position):
 """
 Creates a device.
 @param room: Room
-@param position: Device's position in the room
+@param position: Position
 @returns: True if the device was created. False if room or position are incomplete or incorrect, room is not existing or device is existing in room's position
 """
 
 def create_device(room, position):
-    if not room_format(room):
-        return False
-    if not position or position not in POSITIONS_IN_ROOM:
-        print(f"{RED}[{DEFAULT}-{RED}]{DEFAULT} {BLUE}Position not valid{DEFAULT}")
+    if not room_format(room) or not position_format(position):
         return False
     config_room = get_room(room)
     if not config_room:
@@ -41,7 +39,7 @@ def create_device(room, position):
         config = load(config_file)
         for config_room in config["rooms"]:
             if room.strip() == config_room["room"]:
-                config_room["devices"].append({"position": position, "installed": False, "peripherals": []})
+                config_room["devices"].append({"position": position, "installed": False, "external_peripherals": []})
         config_file.seek(0)
         dump(config, config_file, indent=4)
     print(f"{GREEN}[{DEFAULT}+{GREEN}]{DEFAULT} {BLUE}Device assigned to room{DEFAULT}")
@@ -50,15 +48,12 @@ def create_device(room, position):
 """
 Removes a device.
 @param room: Room
-@param position: Device's position in the room
+@param position: Position
 @returns: True if the device was removed. False if room or position are incomplete or incorrect, room is not existing or device is not existing in room's position
 """
 
 def remove_device(room, position):
-    if not room_format(room):
-        return False
-    if not position or position not in POSITIONS_IN_ROOM:
-        print(f"{RED}[{DEFAULT}-{RED}]{DEFAULT} {BLUE}Position not valid{DEFAULT}")
+    if not room_format(room) or not position_format(position):
         return False
     config_room = get_room(room)
     if not config_room:
@@ -82,15 +77,12 @@ def remove_device(room, position):
 """
 Installs a device.
 @param room: Room
-@param position: Device's position in the room
+@param position: Position
 @returns: True if the device was installed. False if room or position are incomplete or incorrect, room is not existing, device is not existing in room's position or device is already installed in room's position
 """
 
 def install_device(room, position):
-    if not room_format(room):
-        return False
-    if not position or position not in POSITIONS_IN_ROOM:
-        print(f"{RED}[{DEFAULT}-{RED}]{DEFAULT} {BLUE}Position not valid{DEFAULT}")
+    if not room_format(room) or not position_format(position):
         return False
     config_room = get_room(room)
     if not config_room:
@@ -122,3 +114,19 @@ def install_device(room, position):
         config_file.truncate()
     print(f"{GREEN}[{DEFAULT}+{GREEN}]{DEFAULT} {BLUE}Device installed{DEFAULT}")
     return True
+
+"""
+Gets existing devices.
+@returns: A dictionary with room, position, installed or not and external peripherals for each device. False if there are no devices
+"""
+
+def get_devices():
+    devices = []
+    with open(CONFIG_PATH + CONFIG_FILE, "r") as config_file:
+        config = load(config_file)
+        for config_room in config["rooms"]:
+            for config_device in config_room["devices"]:
+                devices.append({"room": config_room["room"], "position": config_device["position"], "installed": config_device["installed"], "external_peripherals": config_device["external_peripherals"]})
+    if len(devices) == 0:
+        return False
+    return devices

@@ -1,4 +1,5 @@
 CONFIG_FILE = "config.json"
+PERIPHERALS_FILE = "peripherals.json"
 PICO_SETUP = "setup.sh"
 
 CONFIG_PATH = "./"
@@ -10,10 +11,12 @@ PICO_PATH = CONFIG_PATH + "Pico/"
 FACES_EXTENSION = ".jpg"
 ENCODED_FACES_EXTENSION = ".npy"
 
-DATE_FORMAT = "%Y-%m-%d"
+DATE_FORMAT = "%d-%m-%Y"
 LANGUAGE_FORMAT = "^[a-z]{2}-[a-z]{2}$"
 
-POSITIONS_IN_ROOM = ["Entrance", "Center", "Back"]
+LEGAL_AGE = 18
+
+COMMAND_TIMEOUT = 10
 
 BLUE = "\x1b[1;34m"
 DEFAULT = "\x1b[0m"

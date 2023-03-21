@@ -1,0 +1,60 @@
+{
+    "external": [
+        {
+            "type": "BerryClip Buzzer",
+            "sensor": false,
+            "actuator": true,
+            "pins": [
+                4
+            ]
+        },
+        {
+            "type": "BerryClip Led",
+            "sensor": false,
+            "actuator": true,
+            "actions": [
+                "on",
+                "off"
+            ],
+            "subtypes": [
+                {
+                    "subtype": "Green",
+                    "pins": [
+                        22,
+                        27
+                    ]
+                },
+                {
+                    "subtype": "Red",
+                    "pins": [
+                        9,
+                        10
+                    ]
+                },
+                {
+                    "subtype": "Yellow",
+                    "pins": [
+                        11,
+                        17
+                    ]
+                }
+            ]
+        }
+    ],
+    "internal": [
+        {
+            "type": "Integrated Led",
+            "sensor": true,
+            "actuator": true,
+            "actions": [
+                "on",
+                "off"
+            ]
+        },
+        {
+            "type": "Internal Temperature",
+            "sensor": true,
+            "actuator": false
+        }
+    ]
+}
