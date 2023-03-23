@@ -1,6 +1,6 @@
 CONFIG_FILE = "config.json"
 PERIPHERALS_FILE = "peripherals.json"
-PICO_SETUP = "setup.sh"
+PICO_SETUP_FILE = "setup.sh"
 
 CONFIG_PATH = "./"
 FACES_PATH = CONFIG_PATH + "Faces/"

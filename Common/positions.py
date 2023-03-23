@@ -26,7 +26,7 @@ def get_position(position):
     with open(CONFIG_PATH + CONFIG_FILE, "r") as config_file:
         config = load(config_file)
         for config_position in config["positions"]:
-            if position.strip() == config_position:
+            if position.strip().lower() == config_position.lower():
                 return config_position
     return False
 
@@ -45,7 +45,7 @@ def create_position(position):
         return False
     with open(CONFIG_PATH + CONFIG_FILE, "r+") as config_file:
         config = load(config_file)
-        config["positions"].append(position.strip())
+        config["positions"].append(position.strip().capitalize())
         config_file.seek(0)
         dump(config, config_file, indent=4)
     print(f"{GREEN}[{DEFAULT}+{GREEN}]{DEFAULT} {BLUE}Position created{DEFAULT}")
@@ -64,7 +64,7 @@ def remove_position(position):
     if not config_position:
         print(f"{RED}[{DEFAULT}-{RED}]{DEFAULT} {BLUE}Non existing position{DEFAULT}")
         return False
-    remove_devices(position)
+    remove_devices(config_position)
     with open(CONFIG_PATH + CONFIG_FILE, "r+") as config_file:
         config = load(config_file)
         config["positions"].remove(config_position)
@@ -84,7 +84,7 @@ def remove_devices(position):
         config = load(config_file)
         for config_room in config["rooms"]:
             for config_device in config_room["devices"]:
-                if position.strip() == config_device["position"]:
+                if position == config_device["position"]:
                     config_room["devices"].remove(config_device)
                     config_file.seek(0)
                     dump(config, config_file, indent=4)

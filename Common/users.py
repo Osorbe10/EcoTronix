@@ -79,7 +79,7 @@ def get_user(name):
     with open(CONFIG_PATH + CONFIG_FILE, "r") as config_file:
         config = load(config_file)
         for config_user in config["users"]:
-            if name.strip() == config_user["name"]:
+            if name.strip().lower() == config_user["name"].lower():
                 return config_user
     return False
 
@@ -112,7 +112,7 @@ def create_user(name, birth_date):
     save(ENCODED_FACES_PATH + timestamp + ENCODED_FACES_EXTENSION, face_encoding)
     with open(CONFIG_PATH + CONFIG_FILE, "r+") as config_file:
         config = load(config_file)
-        config["users"].append({"name": name.strip(), "birth_date": birth_date.strip(), "face": timestamp.strip()})
+        config["users"].append({"name": name.strip().capitalize(), "birth_date": birth_date.strip(), "face": timestamp.strip()})
         config_file.seek(0)
         dump(config, config_file, indent=4)
     print(f"{GREEN}[{DEFAULT}+{GREEN}]{DEFAULT} {BLUE}User created{DEFAULT}")
@@ -131,7 +131,7 @@ def remove_user(name):
     if not config_user:
         print(f"{RED}[{DEFAULT}-{RED}]{DEFAULT} {BLUE}Non existing user{DEFAULT}")
         return False
-    deassign_roles(name)
+    deassign_roles(config_user["name"])
     try:
         remove(FACES_PATH + config_user["face"] + FACES_EXTENSION)
         remove(ENCODED_FACES_PATH + config_user["face"] + ENCODED_FACES_EXTENSION)
@@ -155,8 +155,8 @@ def deassign_roles(name):
     with open(CONFIG_PATH + CONFIG_FILE, "r+") as config_file:
         config = load(config_file)
         for config_role in config["roles"]:
-            if name.strip() in config_role["users"]:
-                config_role["users"].remove(name.strip())
+            if name in config_role["users"]:
+                config_role["users"].remove(name)
                 config_file.seek(0)
                 dump(config, config_file, indent=4)
                 config_file.truncate()
@@ -174,7 +174,7 @@ def age(birth_date):
 
 """
 Gets existing users.
-@returns: A dictionary with name, age and face image name for each user. False if there are no users
+@returns: A dictionary with name, age and face timestamp for each user. False if there are no users
 """
 
 def get_users():

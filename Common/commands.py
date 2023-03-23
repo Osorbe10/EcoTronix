@@ -1,5 +1,5 @@
 from Common.constants import BLUE, CONFIG_FILE, CONFIG_PATH, DEFAULT, GREEN, LANGUAGES_PATH, RED
-from Common.languages import get_kws
+from Common.languages import get_kws_path
 from Common.peripherals import peripheral_format
 from Common.positions import position_format
 from Common.rooms import room_format
@@ -90,7 +90,7 @@ def get_remote_command(peripheral, subtype, action, room, position):
     with open(CONFIG_PATH + CONFIG_FILE, "r") as config_file:
         config = load(config_file)
         for config_command in config["commands"]["remote"]:
-            if peripheral.strip() == config_command["peripheral"] and subtype.strip() == config_command["subtype"] and action.strip() == config_command["action"] and room.strip() == config_command["room"] and position.strip() == config_command["position"]:
+            if peripheral.strip().lower() == config_command["peripheral"].lower() and subtype.strip().lower() == config_command["subtype"].lower() and action.strip().lower() == config_command["action"].lower() and room.strip().lower() == config_command["room"].lower() and position.strip().lower() == config_command["position"].lower():
                 return config_command
     return False
 
@@ -113,6 +113,37 @@ def get_command(phrase, language):
     return False
 
 """
+Counts the number of syllables in a phrase.
+@param phrase: Phrase
+@returns: Phrase's number of syllables
+"""
+
+def get_syllables(phrase):
+    syllables = 0
+    for word in findall(r"\w+", phrase.lower()):
+        syllables += len(findall(r"[aeiou]", word)) - len(findall(r"[aeiou]{2}", word))
+    return syllables
+
+"""
+Gets an estimated threshold of a phrase.
+@param phrase: Phrase
+@returns: Phrase's estimated threshold. False if phrase is incorrect or has more than 10 syllables
+"""
+
+def get_threshold(phrase):
+    syllables = get_syllables(phrase)
+    threshold = False
+    if syllables == 0:
+        print(f"{RED}[{DEFAULT}-{RED}]{DEFAULT} {BLUE}Incorrect phrase{DEFAULT}")
+    elif syllables == 1:
+        threshold = 1
+    elif syllables >= 2 and syllables <= 10:
+        threshold = syllables * 5
+    else:
+        print(f"{RED}[{DEFAULT}-{RED}]{DEFAULT} {BLUE}Phrases cannot have more than 10 syllables{DEFAULT}")
+    return threshold
+
+"""
 Creates a local command.
 @param command: Local command
 @param description: Command's description
@@ -133,7 +164,7 @@ def create_local_command(command, description, age_restriction, privileged, resp
             if language == phrase["language"]:
                 print(f"{RED}[{DEFAULT}-{RED}]{DEFAULT} {BLUE}Existing local command for {language}{DEFAULT}")
                 return False
-    new_phrase = {"language": language.strip(), "response": response.strip(), "phrases": []}
+    new_phrase = {"language": language.strip(), "response": response.strip().lower(), "phrases": []}
     thresholds = []
     for phrase in compile(r"[\n\r]+").split(phrases.strip().lower()):
 
@@ -145,7 +176,7 @@ def create_local_command(command, description, age_restriction, privileged, resp
         if phrase not in new_phrase["phrases"]:
             new_phrase["phrases"].append(sub(r"\s+\n", "\n", phrase.strip()).strip())
             thresholds.append(threshold)
-    with open(path.join(LANGUAGES_PATH, language, get_kws(language)), "r+") as list_file:
+    with open(path.join(LANGUAGES_PATH, language, get_kws_path(language)), "r+") as list_file:
         lines = list_file.readlines()
         index = 0
         for phrase in new_phrase["phrases"]:
@@ -221,7 +252,7 @@ def create_remote_command(peripheral, subtype, action, room, position, descripti
             if language == phrase["language"]:
                 print(f"{RED}[{DEFAULT}-{RED}]{DEFAULT} {BLUE}Existing remote command{DEFAULT}")
                 return False
-    new_phrase = {"language": language.strip(), "response": response.strip(), "phrases": []}
+    new_phrase = {"language": language.strip(), "response": response.strip().lower(), "phrases": []}
     thresholds = []
     for phrase in compile(r"[\n\r]+").split(phrases.strip().lower()):
 
@@ -233,7 +264,7 @@ def create_remote_command(peripheral, subtype, action, room, position, descripti
         if phrase not in new_phrase["phrases"]:
             new_phrase["phrases"].append(sub(r"\s+\n", "\n", phrase.strip()).strip())
             thresholds.append(threshold)
-    with open(path.join(LANGUAGES_PATH, language, get_kws(language)), "r+") as list_file:
+    with open(path.join(LANGUAGES_PATH, language, get_kws_path(language)), "r+") as list_file:
         lines = list_file.readlines()
         index = 0
         for phrase in new_phrase["phrases"]:
@@ -287,7 +318,7 @@ def remove_remote_command(peripheral, subtype, action, room, position):
 
 """
 Gets existing local commands.
-@returns: A dictionary with command, description, privileged and age restriction for each local command. False if there are no local commands
+@returns: A dictionary with description, privileged or not and age restriction or not for each local command. False if there are no local commands
 """
 
 def get_local_commands():
@@ -295,11 +326,11 @@ def get_local_commands():
         config = load(config_file)
         if len(config["commands"]["local"]) == 0:
             return False
-        return [{"command": config_command["command"], "description": config_command["description"], "privileged": config_command["privileged"], "age_restriction": config_command["age_restriction"]} for config_command in config["commands"]["local"]]
+        return [{"description": config_command["description"], "privileged": config_command["privileged"], "age_restriction": config_command["age_restriction"]} for config_command in config["commands"]["local"]]
 
 """
 Gets existing remote commands.
-@returns: A dictionary with peripheral, room, position, description, privileged and age restriction for each remote command. False if there are no remote commands
+@returns: A dictionary with description, privileged or not and age restriction or not for each remote command. False if there are no remote commands
 """
 
 def get_remote_commands():
@@ -307,35 +338,4 @@ def get_remote_commands():
         config = load(config_file)
         if len(config["commands"]["remote"]) == 0:
             return False
-        return [{"peripheral": config_command["peripheral"], "room": config_command["room"], "position": config_command["position"], "description": config_command["description"], "privileged": config_command["privileged"], "age_restriction": config_command["age_restriction"]} for config_command in config["commands"]["remote"]]
-
-"""
-Counts the number of syllables in a phrase.
-@param phrase: Phrase
-@returns: Phrase's number of syllables
-"""
-
-def get_syllables(phrase):
-    syllables = 0
-    for word in findall(r"\w+", phrase.lower()):
-        syllables += len(findall(r"[aeiou]", word)) - len(findall(r"[aeiou]{2}", word))
-    return syllables
-
-"""
-Gets an estimated threshold of a phrase.
-@param phrase: Phrase
-@returns: Phrase's estimated threshold. False if phrase is incorrect or has more than 10 syllables
-"""
-
-def get_threshold(phrase):
-    syllables = get_syllables(phrase)
-    threshold = False
-    if syllables == 0:
-        print(f"{RED}[{DEFAULT}-{RED}]{DEFAULT} {BLUE}Incorrect phrase{DEFAULT}")
-    elif syllables == 1:
-        threshold = 1
-    elif syllables >= 2 and syllables <= 10:
-        threshold = syllables * 5
-    else:
-        print(f"{RED}[{DEFAULT}-{RED}]{DEFAULT} {BLUE}Phrases cannot have more than 10 syllables{DEFAULT}")
-    return threshold
+        return [{"description": config_command["description"], "privileged": config_command["privileged"], "age_restriction": config_command["age_restriction"]} for config_command in config["commands"]["remote"]]

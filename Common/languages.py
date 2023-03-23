@@ -32,7 +32,7 @@ Gets language keywords path.
 @returns: Keywords path for language. False if language not exists
 """
 
-def get_kws(language):
+def get_kws_path(language):
     with open(CONFIG_PATH + CONFIG_FILE, "r") as config_file:
         config = load(config_file)
         for config_language in config["languages"]:

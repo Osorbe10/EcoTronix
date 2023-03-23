@@ -1,6 +1,6 @@
 from Common.constants import BLUE, CONFIG_FILE, CONFIG_PATH, DEFAULT, GREEN, PERIPHERALS_FILE, PICO_PATH, RED
 from Common.devices import get_device
-from Common.positions import position_format
+from Common.positions import get_position, position_format
 from Common.rooms import get_room, room_format
 from json import dump, load
 
@@ -29,7 +29,7 @@ def get_external_peripheral(peripheral):
     with open(PICO_PATH + PERIPHERALS_FILE, "r") as config_file:
         config = load(config_file)
         for config_peripheral in config["external"]:
-            if peripheral.strip() == config_peripheral["type"]:
+            if peripheral.strip().lower() == config_peripheral["type"].lower():
                 return config_peripheral
     return False
 
@@ -48,7 +48,15 @@ def assign_external_peripheral(peripheral, room, position):
     if not config_peripheral:
         print(f"{RED}[{DEFAULT}-{RED}]{DEFAULT} {BLUE}Non existing peripheral{DEFAULT}")
         return False
-    config_device = get_device(get_room(room), position)
+    config_room = get_room(room)
+    if not config_room:
+        print(f"{RED}[{DEFAULT}-{RED}]{DEFAULT} {BLUE}Non existing room{DEFAULT}")
+        return False
+    config_position = get_position(position)
+    if not config_position:
+        print(f"{RED}[{DEFAULT}-{RED}]{DEFAULT} {BLUE}Non existing position{DEFAULT}")
+        return False
+    config_device = get_device(config_room, config_position)
     if not config_device:
         print(f"{RED}[{DEFAULT}-{RED}]{DEFAULT} {BLUE}Non existing device{DEFAULT}")
         return False
@@ -57,11 +65,11 @@ def assign_external_peripheral(peripheral, room, position):
         return False
     with open(CONFIG_PATH + CONFIG_FILE, "r+") as config_file:
         config = load(config_file)
-        for config_room in config["rooms"]:
-            if room.strip() == config_room["room"]:
-                for config_device in config_room["devices"]:
-                    if position.strip() == config_device["position"]:
-                        config_device["external_peripherals"].append(config_peripheral["type"])
+        for _config_room in config["rooms"]:
+            if config_room["room"] == _config_room["room"]:
+                for _config_device in _config_room["devices"]:
+                    if config_position == _config_device["position"]:
+                        _config_device["external_peripherals"].append(config_peripheral["type"])
         config_file.seek(0)
         dump(config, config_file, indent=4)
     print(f"{GREEN}[{DEFAULT}+{GREEN}]{DEFAULT} {BLUE}Peripheral assigned to device{DEFAULT}")
@@ -82,7 +90,15 @@ def deassign_external_peripheral(peripheral, room, position):
     if not config_peripheral:
         print(f"{RED}[{DEFAULT}-{RED}]{DEFAULT} {BLUE}Non existing peripheral{DEFAULT}")
         return False
-    config_device = get_device(get_room(room), position)
+    config_room = get_room(room)
+    if not config_room:
+        print(f"{RED}[{DEFAULT}-{RED}]{DEFAULT} {BLUE}Non existing room{DEFAULT}")
+        return False
+    config_position = get_position(position)
+    if not config_position:
+        print(f"{RED}[{DEFAULT}-{RED}]{DEFAULT} {BLUE}Non existing position{DEFAULT}")
+        return False
+    config_device = get_device(config_room, config_position)
     if not config_device:
         print(f"{RED}[{DEFAULT}-{RED}]{DEFAULT} {BLUE}Non existing device{DEFAULT}")
         return False
@@ -91,11 +107,11 @@ def deassign_external_peripheral(peripheral, room, position):
         return False
     with open(CONFIG_PATH + CONFIG_FILE, "r+") as config_file:
         config = load(config_file)
-        for config_room in config["rooms"]:
-            if room.strip() == config_room["room"]:
-                for config_device in config_room["devices"]:
-                    if position.strip() == config_device["position"]:
-                        config_device["external_peripherals"].remove(config_peripheral["type"])
+        for _config_room in config["rooms"]:
+            if config_room["room"] == _config_room["room"]:
+                for _config_device in _config_room["devices"]:
+                    if config_position == _config_device["position"]:
+                        _config_device["external_peripherals"].remove(config_peripheral["type"])
         config_file.seek(0)
         dump(config, config_file, indent=4)
         config_file.truncate()
@@ -134,35 +150,16 @@ Gets device peripherals.
 """
 
 def get_device_peripherals(room, position):
-    if not room_format(room) or not position_format(position):
-        return False
     config_room = get_room(room)
     if not config_room:
-        print(f"{RED}[{DEFAULT}-{RED}]{DEFAULT} {BLUE}Non existing room{DEFAULT}")
         return False
-    config_device = get_device(config_room, position)
+    config_position = get_position(position)
+    if not config_position:
+        return False
+    config_device = get_device(config_room, config_position)
     if not config_device:
-        print(f"{RED}[{DEFAULT}-{RED}]{DEFAULT} {BLUE}Non existing device in room's position{DEFAULT}")
         return False
     return config_device["external_peripherals"] + [peripheral["type"] for peripheral in get_internal_peripherals()]
-
-"""
-Gets peripheral actions.
-@param peripheral: Peripheral
-@returns: A list with peripheral actions. False if peripheral is incomplete or incorrect, peripheral is not existing or peripheral has no actions
-"""
-
-def get_peripheral_actions(peripheral):
-    if not peripheral_format(peripheral):
-        return False
-    with open(PICO_PATH + PERIPHERALS_FILE, "r") as config_file:
-        config = load(config_file)
-        for config_peripheral in config["external"] + config["internal"]:
-            if peripheral.strip() == config_peripheral["type"]:
-                if "actions" in config_peripheral:
-                    return config_peripheral["actions"]
-                break
-    return False
 
 """
 Gets peripheral subtypes.
@@ -171,13 +168,23 @@ Gets peripheral subtypes.
 """
 
 def get_peripheral_subtypes(peripheral):
-    if not peripheral_format(peripheral):
-        return False
     with open(PICO_PATH + PERIPHERALS_FILE, "r") as config_file:
         config = load(config_file)
         for config_peripheral in config["external"] + config["internal"]:
-            if peripheral.strip() == config_peripheral["type"]:
-                if "subtypes" in config_peripheral:
-                    return [config_subtype["subtype"] for config_subtype in config_peripheral["subtypes"]]
-                break
+            if peripheral.strip().lower() == config_peripheral["type"].lower() and "subtypes" in config_peripheral:
+                return [config_subtype["subtype"] for config_subtype in config_peripheral["subtypes"]]
+    return False
+
+"""
+Gets peripheral actions.
+@param peripheral: Peripheral
+@returns: A list with peripheral actions. False if peripheral is incomplete or incorrect, peripheral is not existing or peripheral has no actions
+"""
+
+def get_peripheral_actions(peripheral):
+    with open(PICO_PATH + PERIPHERALS_FILE, "r") as config_file:
+        config = load(config_file)
+        for config_peripheral in config["external"] + config["internal"]:
+            if peripheral.strip().lower() == config_peripheral["type"].lower() and "actions" in config_peripheral:
+                return config_peripheral["actions"]
     return False

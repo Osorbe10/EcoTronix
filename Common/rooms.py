@@ -26,7 +26,7 @@ def get_room(room):
     with open(CONFIG_PATH + CONFIG_FILE, "r") as config_file:
         config = load(config_file)
         for config_room in config["rooms"]:
-            if room.strip() == config_room["room"]:
+            if room.strip().lower() == config_room["room"].lower():
                 return config_room
     return False
 
@@ -45,7 +45,7 @@ def create_room(room):
         return False
     with open(CONFIG_PATH + CONFIG_FILE, "r+") as config_file:
         config = load(config_file)
-        config["rooms"].append({"room": room.strip(), "devices": []})
+        config["rooms"].append({"room": room.strip().capitalize(), "devices": []})
         config_file.seek(0)
         dump(config, config_file, indent=4)
     print(f"{GREEN}[{DEFAULT}+{GREEN}]{DEFAULT} {BLUE}Room created{DEFAULT}")

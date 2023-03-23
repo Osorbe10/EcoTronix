@@ -27,19 +27,19 @@ def get_role(role):
     with open(CONFIG_PATH + CONFIG_FILE, "r") as config_file:
         config = load(config_file)
         for config_role in config["roles"]:
-            if role.strip() == config_role["role"]:
+            if role.strip().lower() == config_role["role"].lower():
                 return config_role
     return False
 
 """
 Creates a role.
 @param role: Role
-@param age_restriction: True if role has age restriction. False if not. Default is False
-@param privileged: True if role is privileged. False if not. Default is False
+@param age_restriction: True if role has age restriction. False if not
+@param privileged: True if role is privileged. False if not
 @returns: True if the role was created. False if role is incomplete or incorrect or role is existing
 """
 
-def create_role(role, age_restriction = False, privileged = False):
+def create_role(role, age_restriction, privileged):
     if not role_format(role):
         return False
     config_role = get_role(role)
@@ -48,7 +48,7 @@ def create_role(role, age_restriction = False, privileged = False):
         return False
     with open(CONFIG_PATH + CONFIG_FILE, "r+") as config_file:
         config = load(config_file)
-        config["roles"].append({"role": role.strip(), "age_restriction": age_restriction, "privileged": privileged, "users": []})
+        config["roles"].append({"role": role.strip().capitalize(), "age_restriction": age_restriction, "privileged": privileged, "users": []})
         config_file.seek(0)
         dump(config, config_file, indent=4)
     print(f"{GREEN}[{DEFAULT}+{GREEN}]{DEFAULT} {BLUE}Role created{DEFAULT}")
@@ -80,7 +80,7 @@ def remove_role(role):
 Assigns a role to a user.
 @param role: Role
 @param name: User name
-@returns: True if the role was assigned. False if role or user are incomplete, role has age restriction and user is of legal age or user is already assigned to role
+@returns: True if the role was assigned. False if role or user are incomplete or incorrect, role has age restriction and user is of legal age or user is already assigned to role
 """
 
 def assign_role(role, name):
@@ -102,9 +102,9 @@ def assign_role(role, name):
         return False
     with open(CONFIG_PATH + CONFIG_FILE, "r+") as config_file:
         config = load(config_file)
-        for config_role in config["roles"]:
-            if role.strip() == config_role["role"]:
-                config_role["users"].append(config_user["name"])
+        for _config_role in config["roles"]:
+            if config_role["role"] == _config_role["role"]:
+                _config_role["users"].append(config_user["name"])
         config_file.seek(0)
         dump(config, config_file, indent=4)
     print(f"{GREEN}[{DEFAULT}+{GREEN}]{DEFAULT} {BLUE}Role assigned to user{DEFAULT}")
@@ -114,7 +114,7 @@ def assign_role(role, name):
 Deassigns a role from a user.
 @param role: Role
 @param user: User name
-@returns: True if the role was deassigned. False if role or user are incomplete or user is not assigned to role
+@returns: True if the role was deassigned. False if role or user are incomplete or incorrect or user is not assigned to role
 """
 
 def deassign_role(role, name):
@@ -133,9 +133,9 @@ def deassign_role(role, name):
         return False
     with open(CONFIG_PATH + CONFIG_FILE, "r+") as config_file:
         config = load(config_file)
-        for config_role in config["roles"]:
-            if role.strip() == config_role["role"]:
-                config_role["users"].remove(config_user["name"])
+        for _config_role in config["roles"]:
+            if config_role["role"] == _config_role["role"]:
+                _config_role["users"].remove(config_user["name"])
         config_file.seek(0)
         dump(config, config_file, indent=4)
         config_file.truncate()

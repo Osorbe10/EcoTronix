@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 from chime import info, success, warning
-from Common.commands import get_command, get_local_command, get_remote_command
+from Common.commands import get_command
 from Common.constants import BLUE, COMMAND_TIMEOUT, DEFAULT, ENCODED_FACES_EXTENSION, ENCODED_FACES_PATH, GREEN, LANGUAGES_PATH, RED, YELLOW
 from Common.devices import get_devices
 from Common.languages import get_default_language_paths
@@ -125,9 +125,12 @@ def execute(config_command, language):
         room = config_command["room"]
         position = config_command["position"]
         response = config_command["response"]
-        client.publish(path.join(room.lower().replace(" ", "_"), position.lower().replace(" ", "_"), peripheral.lower().replace(" ", "_"), subtype.lower().replace(" ", "_")), payload=action, qos=1)
+        hierarchy = path.join(room.lower().replace(" ", "_"), position.lower().replace(" ", "_"), peripheral.lower().replace(" ", "_"))
+        if subtype:
+            hierarchy = path.join(hierarchy, subtype.lower().replace(" ", "_"))
+        client.publish(hierarchy, payload=action, qos=1)
         Popen(f"espeak -s 150 \"{response}\" -v {language} >{devnull} 2>&1", shell=True)
-        print(f"{GREEN}[{DEFAULT}+{GREEN}]{DEFAULT} {BLUE}Executed: " + "/".join((room, position, peripheral, subtype)) + (" " + action if action else "") + f"{DEFAULT}")
+        print(f"{GREEN}[{DEFAULT}+{GREEN}]{DEFAULT} {BLUE}Executed: " + hierarchy + (" " + action if action else "") + f"{DEFAULT}")
 
 """
 Checks if a command is allowed.
@@ -218,61 +221,16 @@ def face_recognition(stop):
                         success()
                         print(f"{YELLOW}[{DEFAULT}*{YELLOW}]{DEFAULT} {BLUE}Loading {name} profile...{DEFAULT}")
                         last_user = name
-                        for index in range(pending_commands.len()):
-                            pending_command = pending_commands.get(index - 1)
-                            pending_commands.remove(index - 1)
-                            info()
-                            execute(pending_command[0], pending_command[1])
+
+                        # TODO: Launch every action associated with the user
+
+                    for index in range(pending_commands.len()):
+                        pending_command = pending_commands.get(index - 1)
+                        pending_commands.remove(index - 1)
+                        info()
+                        execute(pending_command[0], pending_command[1])
         process_frame = not process_frame
     camera.release()
-
-# setting callbacks for different events to see if it works, print the message etc.
-def on_connect(client, userdata, flags, rc, properties=None):
-    """
-        Prints the result of the connection with a reasoncode to stdout ( used as callback for connect )
-        :param client: the client itself
-        :param userdata: userdata is set when initiating the client, here it is userdata=None
-        :param flags: these are response flags sent by the broker
-        :param rc: stands for reasonCode, which is a code for the connection result
-        :param properties: can be used in MQTTv5, but is optional
-    """
-    print("CONNACK received with code %s." % rc)
-
-
-# with this callback you can see if your publish was successful
-def on_publish(client, userdata, mid, properties=None):
-    """
-        Prints mid to stdout to reassure a successful publish ( used as callback for publish )
-        :param client: the client itself
-        :param userdata: userdata is set when initiating the client, here it is userdata=None
-        :param mid: variable returned from the corresponding publish() call, to allow outgoing messages to be tracked
-        :param properties: can be used in MQTTv5, but is optional
-    """
-    print("mid: " + str(mid))
-
-
-# print which topic was subscribed to
-def on_subscribe(client, userdata, mid, granted_qos, properties=None):
-    """
-        Prints a reassurance for successfully subscribing
-        :param client: the client itself
-        :param userdata: userdata is set when initiating the client, here it is userdata=None
-        :param mid: variable returned from the corresponding publish() call, to allow outgoing messages to be tracked
-        :param granted_qos: this is the qos that you declare when subscribing, use the same one for publishing
-        :param properties: can be used in MQTTv5, but is optional
-    """
-    print("Subscribed: " + str(mid) + " " + str(granted_qos))
-
-
-# print message, useful for checking if it was successful
-def on_message(client, userdata, msg):
-    """
-        Prints a mqtt message to stdout ( used as callback for subscribe )
-        :param client: the client itself
-        :param userdata: userdata is set when initiating the client, here it is userdata=None
-        :param msg: the message with topic and payload
-    """
-    print(msg.topic + " " + str(msg.qos) + " " + str(msg.payload))
 
 """
 Connects to MQTT broker.
@@ -283,23 +241,13 @@ Connects to MQTT broker.
 def start_mqtt():
     global client
     client = Client(protocol=MQTTv5)
-    client.on_connect = on_connect
     try:   
         client.connect(gethostname())
     except ConnectionRefusedError:
         return False
-    client.on_subscribe = on_subscribe
-    client.on_message = on_message
-    client.on_publish = on_publish
     for device in get_devices():
         if device["installed"]:
             client.subscribe(path.join(device["room"].lower().replace(" ", "_"), device["position"].lower().replace(" ", "_"), "#"), qos=1)
-    client.publish("kitchen/entrance/berryclip_led/red", payload="on", qos=1)
-    client.publish("kitchen/entrance/berryclip_led/yellow", payload="on", qos=1)
-    client.publish("kitchen/entrance/berryclip_buzzer", qos=1)
-    client.publish("kitchen/entrance/integrated_led", payload="on", qos=1)
-    client.publish("kitchen/entrance/get_integrated_led", qos=1)
-    client.publish("kitchen/entrance/get_internal_temperature", qos=1)
     client.loop_start()
     return True
 

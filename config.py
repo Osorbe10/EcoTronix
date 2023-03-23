@@ -383,6 +383,8 @@ class Config(Tk):
         Config.gui_update_devices_device_menu(self)
         Config.gui_update_commands_device_menu(self)
         Config.gui_update_commands_peripheral_menu(self)
+        Config.gui_update_commands_subtype_menu(self)
+        Config.gui_update_commands_action_menu(self)
 
     """
     Creates a position in graphical mode.
@@ -405,6 +407,8 @@ class Config(Tk):
         Config.gui_update_devices_device_menu(self)
         Config.gui_update_commands_device_menu(self)
         Config.gui_update_commands_peripheral_menu(self)
+        Config.gui_update_commands_subtype_menu(self)
+        Config.gui_update_commands_action_menu(self)
 
     """
     Creates a device in graphical mode.
@@ -416,6 +420,8 @@ class Config(Tk):
         Config.gui_update_devices_device_menu(self)
         Config.gui_update_commands_device_menu(self)
         Config.gui_update_commands_peripheral_menu(self)
+        Config.gui_update_commands_subtype_menu(self)
+        Config.gui_update_commands_action_menu(self)
 
     """
     Removes a device in graphical mode.
@@ -427,6 +433,8 @@ class Config(Tk):
         Config.gui_update_devices_device_menu(self)
         Config.gui_update_commands_device_menu(self)
         Config.gui_update_commands_peripheral_menu(self)
+        Config.gui_update_commands_subtype_menu(self)
+        Config.gui_update_commands_action_menu(self)
 
     """
     Assigns a peripheral to a device in graphical mode.
@@ -436,6 +444,8 @@ class Config(Tk):
         assign_external_peripheral(self.devices_peripheral_entry.get(), literal_eval(self.devices_device_entry.get())[0] if self.devices_device_entry.get() else self.devices_device_entry.get(), literal_eval(self.devices_device_entry.get())[1] if self.devices_device_entry.get() else self.devices_device_entry.get())
         Config.gui_update_devices_list(self)
         Config.gui_update_commands_peripheral_menu(self)
+        Config.gui_update_commands_subtype_menu(self)
+        Config.gui_update_commands_action_menu(self)
 
     """
     Deassigns a peripheral from a device in graphical mode.
@@ -445,6 +455,8 @@ class Config(Tk):
         deassign_external_peripheral(self.devices_peripheral_entry.get(), literal_eval(self.devices_device_entry.get())[0] if self.devices_device_entry.get() else self.devices_device_entry.get(), literal_eval(self.devices_device_entry.get())[1] if self.devices_device_entry.get() else self.devices_device_entry.get())
         Config.gui_update_devices_list(self)
         Config.gui_update_commands_peripheral_menu(self)
+        Config.gui_update_commands_subtype_menu(self)
+        Config.gui_update_commands_action_menu(self)
 
     """
     Installs a device in graphical mode.
@@ -489,8 +501,6 @@ class Config(Tk):
     def gui_remove_role(self):
         remove_role(self.roles_role_entry.get())
         Config.gui_update_roles_list(self)
-        Config.gui_update_local_commands_list(self)
-        Config.gui_update_remote_commands_list(self)
         Config.gui_update_roles_role_menu(self)
 
     """
@@ -688,7 +698,6 @@ class Config(Tk):
                 self.devices_room_menu["menu"].add_command(label=room, command=lambda value=room: self.devices_room_entry.set(value))
             self.devices_room_entry.set(rooms[0])
         else:
-            self.devices_room_menu["menu"].add_command(label="", command=lambda value="": self.devices_room_entry.set(value))
             self.devices_room_entry.set("")
 
     """
@@ -703,7 +712,6 @@ class Config(Tk):
                 self.devices_position_menu["menu"].add_command(label=position, command=lambda value=position: self.devices_position_entry.set(value))
             self.devices_position_entry.set(positions[0])
         else:
-            self.devices_position_menu["menu"].add_command(label="", command=lambda value="": self.devices_position_entry.set(value))
             self.devices_position_entry.set("")
 
     """
@@ -718,7 +726,6 @@ class Config(Tk):
                 self.devices_peripheral_menu["menu"].add_command(label=peripheral["type"], command=lambda value=peripheral["type"]: self.devices_peripheral_entry.set(value))
             self.devices_peripheral_entry.set(peripherals[0]["type"])
         else:
-            self.devices_peripheral_menu["menu"].add_command(label="", command=lambda value="": self.devices_peripheral_entry.set(value))
             self.devices_peripheral_entry.set("")
 
     """
@@ -733,7 +740,6 @@ class Config(Tk):
                 self.devices_device_menu["menu"].add_command(label=(device["room"] + " (" + device["position"] + ")"), command=lambda value=(device["room"], device["position"]): self.devices_device_entry.set(value))
             self.devices_device_entry.set((devices[0]["room"], devices[0]["position"]))
         else:
-            self.devices_device_menu["menu"].add_command(label="", command=lambda value="": self.devices_device_entry.set(value))
             self.devices_device_entry.set("")
 
     """
@@ -748,7 +754,6 @@ class Config(Tk):
                 self.roles_user_menu["menu"].add_command(label=user["name"], command=lambda value=user["name"]: self.roles_assignment_user_entry.set(value))
             self.roles_assignment_user_entry.set(users[0]["name"])
         else:
-            self.roles_user_menu["menu"].add_command(label="", command=lambda value="": self.roles_assignment_user_entry.set(value))
             self.roles_assignment_user_entry.set("")
 
     """
@@ -763,7 +768,6 @@ class Config(Tk):
                 self.roles_role_menu["menu"].add_command(label=role["role"], command=lambda value=role["role"]: self.roles_assignment_role_entry.set(value))
             self.roles_assignment_role_entry.set(roles[0]["role"])
         else:
-            self.roles_role_menu["menu"].add_command(label="", command=lambda value="": self.roles_assignment_role_entry.set(value))
             self.roles_assignment_role_entry.set("")
 
     """
@@ -778,7 +782,6 @@ class Config(Tk):
                 self.commands_device_menu["menu"].add_command(label=(device["room"] + " (" + device["position"] + ")"), command=lambda value=(device["room"], device["position"]): (self.commands_device_entry.set(value), Config.gui_update_commands_peripheral_menu(self)))
             self.commands_device_entry.set((devices[0]["room"], devices[0]["position"]))
         else:
-            self.commands_device_menu["menu"].add_command(label="", command=lambda value="": (self.commands_device_entry.set(value), Config.gui_update_commands_peripheral_menu(self)))
             self.commands_device_entry.set("")
 
     """
@@ -793,7 +796,6 @@ class Config(Tk):
                 self.commands_peripheral_menu["menu"].add_command(label=peripheral, command=lambda value=peripheral: (self.commands_peripheral_entry.set(value), Config.gui_update_commands_subtype_menu(self), Config.gui_update_commands_action_menu(self)))
             self.commands_peripheral_entry.set(peripherals[0])
         else:
-            self.commands_peripheral_menu["menu"].add_command(label="", command=lambda value="": (self.commands_peripheral_entry.set(value), Config.gui_update_commands_subtype_menu(self), Config.gui_update_commands_action_menu(self)))
             self.commands_peripheral_entry.set("")
 
     """
@@ -808,7 +810,6 @@ class Config(Tk):
                 self.commands_subtype_menu["menu"].add_command(label=action, command=lambda value=action: self.commands_subtype_entry.set(value))
             self.commands_subtype_entry.set(actions[0])
         else:
-            self.commands_subtype_menu["menu"].add_command(label="", command=lambda value="": self.commands_subtype_entry.set(value))
             self.commands_subtype_entry.set("")
 
     """
@@ -823,7 +824,6 @@ class Config(Tk):
                 self.commands_action_menu["menu"].add_command(label=action, command=lambda value=action: self.commands_action_entry.set(value))
             self.commands_action_entry.set(actions[0])
         else:
-            self.commands_action_menu["menu"].add_command(label="", command=lambda value="": self.commands_action_entry.set(value))
             self.commands_action_entry.set("")
 
 """
