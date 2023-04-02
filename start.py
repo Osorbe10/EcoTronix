@@ -4,7 +4,7 @@ from chime import info, success, warning
 from Common.commands import get_command
 from Common.constants import BLUE, COMMAND_TIMEOUT, DEFAULT, ENCODED_FACES_EXTENSION, ENCODED_FACES_PATH, GREEN, LANGUAGES_PATH, RED, YELLOW
 from Common.devices import get_devices
-from Common.languages import get_default_language_paths
+from Common.languages import get_default_language, get_default_language_paths
 from Common.users import get_users
 from contextlib import contextmanager
 from cv2 import CAP_V4L2, resize, VideoCapture
@@ -165,7 +165,7 @@ Runs speech recognition until stop event is set.
 """
 
 def speech_recognition(stop):
-    language, hmm_path, dic_path, kws_path = language_paths
+    hmm_path, dic_path, kws_path = language_paths
     config = Config(lm=None, hmm=path.join(LANGUAGES_PATH, language, hmm_path), dict=path.join(LANGUAGES_PATH, language, dic_path), kws=path.join(LANGUAGES_PATH, language, kws_path), logfn=devnull)
     decoder = Decoder(config)
     decoder.start_utt()
@@ -261,8 +261,9 @@ if __name__ == "__main__":
         if not users:
             print(f"{RED}[{DEFAULT}-{RED}]{DEFAULT} {BLUE}No users found{DEFAULT}")
             exit()
+        language = get_default_language()
         language_paths = get_default_language_paths()
-        if not language_paths:
+        if not language or not language_paths:
             print(f"{RED}[{DEFAULT}-{RED}]{DEFAULT} {BLUE}No languages found{DEFAULT}")
             exit()
         print(f"{YELLOW}[{DEFAULT}*{YELLOW}]{DEFAULT} {BLUE}Starting EcoTronix...{DEFAULT}")

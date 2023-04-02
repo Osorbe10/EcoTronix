@@ -4,6 +4,7 @@ from ast import literal_eval
 from Common.commands import create_local_command, create_remote_command, get_local_commands, get_remote_commands, remove_local_command, remove_remote_command
 from Common.constants import BLUE, DEFAULT, RED, YELLOW
 from Common.devices import create_device, get_devices, install_device, remove_device
+from Common.general import get_legal_age, get_wifi_password, get_wifi_ssid, set_legal_age, set_wifi_credentials
 from Common.languages import get_default_language, get_installed_languages, set_default_language
 from Common.peripherals import assign_external_peripheral, deassign_external_peripheral, get_device_peripherals, get_external_peripherals, get_internal_peripherals, get_peripheral_actions, get_peripheral_subtypes
 from Common.positions import create_position, get_positions, remove_position
@@ -43,7 +44,32 @@ class Config(Tk):
         self.general_language_menu = OptionMenu(self.general_1_frame, self.general_language_entry, *languages, command=lambda selection: set_default_language(selection))
         self.general_language_menu.pack(side=LEFT, padx=10)
 
-        # TODO: Add age selection for minor age
+        self.general_2_frame = Frame(self.general_frame)
+        self.general_2_frame.pack(side=TOP, pady=10)
+
+        self.general_legal_age_label = Label(self.general_2_frame, text="Legal Age")
+        self.general_legal_age_label.pack(side=LEFT, padx=10)
+        self.general_legal_age_entry = Entry(self.general_2_frame)
+        self.general_legal_age_entry.insert(0, get_legal_age())
+        self.general_legal_age_entry.pack(side=LEFT, padx=10)
+        self.general_legal_age_set_button = Button(self.general_2_frame, text="Set", command=lambda: set_legal_age(self.general_legal_age_entry.get()))
+        self.general_legal_age_set_button.pack(side=LEFT, padx=10)
+
+        self.general_3_frame = Frame(self.general_frame)
+        self.general_3_frame.pack(side=TOP, pady=10)
+
+        self.general_wifi_ssid_label = Label(self.general_3_frame, text="Wifi SSID")
+        self.general_wifi_ssid_label.pack(side=LEFT, padx=10)
+        self.general_wifi_ssid_entry = Entry(self.general_3_frame)
+        self.general_wifi_ssid_entry.insert(0, get_wifi_ssid())
+        self.general_wifi_ssid_entry.pack(side=LEFT, padx=10)
+        self.general_wifi_password_label = Label(self.general_3_frame, text="Wifi Password")
+        self.general_wifi_password_label.pack(side=LEFT, padx=10)
+        self.general_wifi_password_entry = Entry(self.general_3_frame, show="*")
+        self.general_wifi_password_entry.insert(0, get_wifi_password())
+        self.general_wifi_password_entry.pack(side=LEFT, padx=10)
+        self.general_wifi_credentials_set_button = Button(self.general_3_frame, text="Set", command=lambda: set_wifi_credentials(self.general_wifi_ssid_entry.get(), self.general_wifi_password_entry.get()))
+        self.general_wifi_credentials_set_button.pack(side=LEFT, padx=10)
 
         # TODO: Add automatic start on boot option
 

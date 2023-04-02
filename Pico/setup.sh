@@ -17,18 +17,6 @@ function control_c {
 
 trap control_c INT
 
-# Capture arguments
-
-if [[ $# -ne 2 ]]; then
-    echo -ne "${RED}[${DEFAULT}-${RED}]${DEFAULT} ${BLUE}Usage: ./setup.sh <room> <position>${DEFAULT}\n"
-    exit 1
-fi
-
-room=$1
-position=$2
-
-# TODO: Edit Codes/config.py with personalized data
-
 # Setup Raspberry Pi Pico W
 
 pico_path="/media/${USER}/RPI-RP2/"
@@ -51,7 +39,7 @@ rm Pico/old.tmp Pico/new.tmp
 echo -ne "${YELLOW}[${DEFAULT}*${YELLOW}]${DEFAULT} ${BLUE}Copying codes...${DEFAULT}\n"
 rshell --buffer-size 512 -p ${tty} rm -r /pyboard/* >/dev/null 2>&1
 rshell --buffer-size 512 -p ${tty} cp Pico/Codes/start.py /pyboard >/dev/null 2>&1
-rshell --buffer-size 512 -p ${tty} cp Pico/Codes/config.py /pyboard >/dev/null 2>&1
+rshell --buffer-size 512 -p ${tty} cp Pico/Codes/config.json /pyboard >/dev/null 2>&1
 rshell --buffer-size 512 -p ${tty} cp -r Pico/Codes/umqtt /pyboard >/dev/null 2>&1
 echo -ne "${GREEN}[${DEFAULT}+${GREEN}]${DEFAULT} ${BLUE}Codes copied${DEFAULT}\n"
 

@@ -1,0 +1,15 @@
+{
+    "wifi": {
+        "ssid": "",
+        "password": ""
+    },
+    "mqtt": {
+        "server": "",
+        "room": "",
+        "position": ""
+    },
+    "peripherals": {
+        "external": [],
+        "internal": []
+    }
+}

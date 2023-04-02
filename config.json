@@ -7,5 +7,9 @@
         "local": [],
         "remote": []
     },
-    "languages": []
+    "languages": [],
+    "general": {
+        "default_language": "",
+        "legal_age": 18
+    }
 }

@@ -120,7 +120,7 @@ Counts the number of syllables in a phrase.
 
 def get_syllables(phrase):
     syllables = 0
-    for word in findall(r"\w+", phrase.lower()):
+    for word in findall(r"\w+", phrase.strip().lower()):
         syllables += len(findall(r"[aeiou]", word)) - len(findall(r"[aeiou]{2}", word))
     return syllables
 
@@ -144,6 +144,57 @@ def get_threshold(phrase):
     return threshold
 
 """
+Append new phrases with their estimated thresholds to the kws file.
+@param language: Language
+@param phrases: Phrases
+@param thresholds: Phrase's estimated thresholds
+"""
+
+def append_phrases_to_kws_file(language, phrases, thresholds):
+    with open(path.join(LANGUAGES_PATH, language, get_kws_path(language)), "r+") as list_file:
+        lines = list_file.readlines()
+        index = 0
+        for phrase in phrases:
+            phrase_with_threshold = phrase + " /1e-" + str(thresholds[index]) + "/\n"
+            if phrase_with_threshold not in lines:
+                lines.append(phrase_with_threshold)
+            index += 1
+        list_file.seek(0)
+        list_file.writelines(sorted(lines))
+
+"""
+Removes phrases and their estimated thresholds from the kws file.
+@param language: Language
+@param phrases: Phrases
+"""
+
+def remove_phrases_from_kws_file(language, phrases):
+    # TODO: Remove phrases from kws file.
+    pass
+
+"""
+Manages new phrases.
+@param language: Language
+@param phrases: Phrases
+@param response: Response
+@returns: New config phrase if phrases are correct. False if not
+"""
+
+def manage_new_phrase(language, phrases, response):
+    new_phrase = {"language": language.strip().lower(), "response": response.strip().lower(), "phrases": []}
+    thresholds = []
+    for phrase in compile(r"[\n\r]+").split(phrases.strip().lower()):
+        # TODO: Check if every word exists in that language dictionary file and every phrase is not used for other command. If not, ignore it.
+        threshold = get_threshold(phrase)
+        if not threshold:
+            return False
+        if phrase not in new_phrase["phrases"]:
+            new_phrase["phrases"].append(sub(r"\s+\n", "\n", phrase.strip()).strip())
+            thresholds.append(threshold)
+    append_phrases_to_kws_file(language, new_phrase["phrases"], thresholds)
+    return new_phrase
+
+"""
 Creates a local command.
 @param command: Local command
 @param description: Command's description
@@ -152,7 +203,7 @@ Creates a local command.
 @param response: Response
 @param phrases: Phrases
 @param language: Language
-@returns: True if the local command was created. False if local command or description are incomplete or local command is existing
+@returns: True if the local command was created. False if local command is incomplete or description, response and phrases are incomplete or incorrect or local command is existing
 """
 
 def create_local_command(command, description, age_restriction, privileged, response, phrases, language):
@@ -161,31 +212,10 @@ def create_local_command(command, description, age_restriction, privileged, resp
     config_command = get_local_command(command)
     if config_command:
         for phrase in config_command["phrases"]:
-            if language == phrase["language"]:
+            if language.strip().lower() == phrase["language"]:
                 print(f"{RED}[{DEFAULT}-{RED}]{DEFAULT} {BLUE}Existing local command for {language}{DEFAULT}")
                 return False
-    new_phrase = {"language": language.strip(), "response": response.strip().lower(), "phrases": []}
-    thresholds = []
-    for phrase in compile(r"[\n\r]+").split(phrases.strip().lower()):
-
-        # TODO: Check if every word exists in that language dictionary file and every phrase is not used for other command. If not, ignore it.
-        
-        threshold = get_threshold(phrase)
-        if not threshold:
-            return False
-        if phrase not in new_phrase["phrases"]:
-            new_phrase["phrases"].append(sub(r"\s+\n", "\n", phrase.strip()).strip())
-            thresholds.append(threshold)
-    with open(path.join(LANGUAGES_PATH, language, get_kws_path(language)), "r+") as list_file:
-        lines = list_file.readlines()
-        index = 0
-        for phrase in new_phrase["phrases"]:
-            phrase_with_threshold = phrase + " /1e-" + str(thresholds[index]) + "/\n"
-            if phrase_with_threshold not in lines:
-                lines.append(phrase_with_threshold)
-            index += 1
-        list_file.seek(0)
-        list_file.writelines(sorted(lines))
+    new_phrase = manage_new_phrase(language, phrases, response)
     with open(CONFIG_PATH + CONFIG_FILE, "r+") as config_file:
         config = load(config_file)
         if not config_command:
@@ -194,12 +224,54 @@ def create_local_command(command, description, age_restriction, privileged, resp
             config["commands"]["local"].append(new_command)
         else:
             for config_command in config["commands"]["local"]:
-                if command == config_command["command"]:
+                if command.strip() == config_command["command"]:
                     config_command["phrases"].append(new_phrase)
                     break
         config_file.seek(0)
         dump(config, config_file, indent=4)
     print(f"{GREEN}[{DEFAULT}+{GREEN}]{DEFAULT} {BLUE}Local command for {language} created{DEFAULT}")
+    return True
+
+"""
+Creates a remote command.
+@param peripheral: Peripheral
+@param subtype: Subtype
+@param action: Action
+@param room: Room
+@param position: Position
+@param description: Command's description
+@param age_restriction: True if command has age_restriction. False if not
+@param privileged: True if command is privileged. False if not
+@param response: Response
+@param phrases: Phrases
+@param language: Language
+@returns: True if the remote command was created. False if remote command, description, response or phrases are incomplete or incorrect or remote command is existing
+"""
+
+def create_remote_command(peripheral, subtype, action, room, position, description, age_restriction, privileged, response, phrases, language):
+    if not peripheral_format(peripheral) or not room_format(room) or not position_format(position) or not description_format(description) or not response_format(response) or not phrases_format(phrases):
+        return False
+    config_command = get_remote_command(peripheral, subtype, action, room, position)
+    if config_command:
+        for phrase in config_command["phrases"]:
+            if language.strip().lower() == phrase["language"]:
+                print(f"{RED}[{DEFAULT}-{RED}]{DEFAULT} {BLUE}Existing remote command{DEFAULT}")
+                return False
+    new_phrase = manage_new_phrase(language, phrases, response)
+    with open(CONFIG_PATH + CONFIG_FILE, "r+") as config_file:
+        config = load(config_file)
+        if not config_command:
+            new_command = {"peripheral": peripheral.strip(), "subtype": subtype.strip(), "action": action.strip(), "room": room.strip(), "position": position.strip(), "description": description.strip(), "age_restriction": age_restriction, "privileged": privileged, "phrases": []}
+            new_command["phrases"].append(new_phrase)
+            config["commands"]["remote"].append(new_command)
+        else:
+            for config_command in config["commands"]["remote"]:
+                if peripheral.strip() == config_command["peripheral"] and subtype.strip() == config_command["subtype"] and action.strip() == config_command["action"] and room.strip() == config_command["room"] and position.strip() == config_command["position"]:
+                    config_command["phrases"].append(new_phrase)
+                    break
+        config_file.seek(0)
+        dump(config, config_file, indent=4)
+    print(f"{GREEN}[{DEFAULT}+{GREEN}]{DEFAULT} {BLUE}Remote command for {language} created{DEFAULT}")
     return True
 
 """
@@ -221,73 +293,8 @@ def remove_local_command(command):
         config_file.seek(0)
         dump(config, config_file, indent=4)
         config_file.truncate()
-
-    # TODO: Remove phrases from kws file.
-
+    #remove_phrases_from_kws_file(language, phrases)
     print(f"{GREEN}[{DEFAULT}+{GREEN}]{DEFAULT} {BLUE}Local command removed{DEFAULT}")
-    return True
-
-"""
-Creates a remote command.
-@param peripheral: Peripheral
-@param subtype: Subtype
-@param action: Action
-@param room: Room
-@param position: Position
-@param description: Command's description
-@param age_restriction: True if command has age_restriction. False if not
-@param privileged: True if command is privileged. False if not
-@param response: Response
-@param phrases: Phrases
-@param language: Language
-@returns: True if the remote command was created. False if remote command or description are incomplete or remote command is existing
-"""
-
-def create_remote_command(peripheral, subtype, action, room, position, description, age_restriction, privileged, response, phrases, language):
-    if not peripheral_format(peripheral) or not room_format(room) or not position_format(position) or not description_format(description) or not response_format(response) or not phrases_format(phrases):
-        return False
-    config_command = get_remote_command(peripheral, subtype, action, room, position)
-    if config_command:
-        for phrase in config_command["phrases"]:
-            if language == phrase["language"]:
-                print(f"{RED}[{DEFAULT}-{RED}]{DEFAULT} {BLUE}Existing remote command{DEFAULT}")
-                return False
-    new_phrase = {"language": language.strip(), "response": response.strip().lower(), "phrases": []}
-    thresholds = []
-    for phrase in compile(r"[\n\r]+").split(phrases.strip().lower()):
-
-        # TODO: Check if every word exists in that language dictionary file and every phrase is not used for other command. If not, ignore it.
-        
-        threshold = get_threshold(phrase)
-        if not threshold:
-            return False
-        if phrase not in new_phrase["phrases"]:
-            new_phrase["phrases"].append(sub(r"\s+\n", "\n", phrase.strip()).strip())
-            thresholds.append(threshold)
-    with open(path.join(LANGUAGES_PATH, language, get_kws_path(language)), "r+") as list_file:
-        lines = list_file.readlines()
-        index = 0
-        for phrase in new_phrase["phrases"]:
-            phrase_with_threshold = phrase + " /1e-" + str(thresholds[index]) + "/\n"
-            if phrase_with_threshold not in lines:
-                lines.append(phrase_with_threshold)
-            index += 1
-        list_file.seek(0)
-        list_file.writelines(sorted(lines))
-    with open(CONFIG_PATH + CONFIG_FILE, "r+") as config_file:
-        config = load(config_file)
-        if not config_command:
-            new_command = {"peripheral": peripheral.strip(), "subtype": subtype.strip(), "action": action.strip(), "room": room.strip(), "position": position.strip(), "description": description.strip(), "age_restriction": age_restriction, "privileged": privileged, "phrases": []}
-            new_command["phrases"].append(new_phrase)
-            config["commands"]["remote"].append(new_command)
-        else:
-            for config_command in config["commands"]["remote"]:
-                if peripheral == config_command["peripheral"] and subtype == config_command["subtype"] and action == config_command["action"] and room == config_command["room"] and position == config_command["position"]:
-                    config_command["phrases"].append(new_phrase)
-                    break
-        config_file.seek(0)
-        dump(config, config_file, indent=4)
-    print(f"{GREEN}[{DEFAULT}+{GREEN}]{DEFAULT} {BLUE}Remote command for {language} created{DEFAULT}")
     return True
 
 """
@@ -297,7 +304,7 @@ Removes a remote command.
 @param action: Action
 @param room: Room
 @param position: Position
-@returns: True if the remote command was removed. False if remote command is incomplete or remote command is not existing
+@returns: True if the remote command was removed. False if remote command is incomplete or incorrect or remote command is not existing
 """
 
 def remove_remote_command(peripheral, subtype, action, room, position):
@@ -313,6 +320,7 @@ def remove_remote_command(peripheral, subtype, action, room, position):
         config_file.seek(0)
         dump(config, config_file, indent=4)
         config_file.truncate()
+    #remove_phrases_from_kws_file(language, phrases)
     print(f"{GREEN}[{DEFAULT}+{GREEN}]{DEFAULT} {BLUE}Remote command removed{DEFAULT}")
     return True
 

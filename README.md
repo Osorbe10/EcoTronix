@@ -26,7 +26,7 @@ cd EcoTronix && sudo chmod +x install.sh
 sudo ./install.sh
 ```
 
-Once the installation is finished, it is recommended to enter the settings to configure the system.
+Once the installation is finished, it is mandatory to enter the settings to configure the system.
 
 ## Usage
 
@@ -46,7 +46,7 @@ Once configured, to start the application type the following command in the term
 
 ## Compatibility
 
-Tested on Raspbian GNU/Linux 11 (bullseye) for Raspberry Pi 3 Model B Rev 1.2 with a Raspberry Pi Camera Rev 1.3
+Tested on Raspbian GNU/Linux 11 (bullseye) for Raspberry Pi 3 Model B V1.2 with a Raspberry Pi NoIR Camera V2.1 and on Raspberry Pi Pico W 2022.
 
 To verify your Raspberry Pi model and OS, enter the following command in a terminal:
 

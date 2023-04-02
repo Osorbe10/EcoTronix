@@ -1,4 +1,4 @@
-from Common.constants import BLUE, CONFIG_FILE, CONFIG_PATH, DEFAULT, GREEN, LEGAL_AGE, RED
+from Common.constants import BLUE, CONFIG_FILE, CONFIG_PATH, DEFAULT, GREEN, RED
 from Common.users import age, get_user, name_format
 from json import dump, load
 
@@ -97,11 +97,11 @@ def assign_role(role, name):
     if config_user["name"] in config_role["users"]:
         print(f"{RED}[{DEFAULT}-{RED}]{DEFAULT} {BLUE}Role already assigned to user{DEFAULT}")
         return False
-    if config_role["age_restriction"] and age(config_user["birth_date"]) >= LEGAL_AGE:
-        print(f"{RED}[{DEFAULT}-{RED}]{DEFAULT} {BLUE}User is of legal age{DEFAULT}")
-        return False
     with open(CONFIG_PATH + CONFIG_FILE, "r+") as config_file:
         config = load(config_file)
+        if config_role["age_restriction"] and age(config_user["birth_date"]) >= config["general"]["legal_age"]:
+            print(f"{RED}[{DEFAULT}-{RED}]{DEFAULT} {BLUE}User is of legal age{DEFAULT}")
+            return False
         for _config_role in config["roles"]:
             if config_role["role"] == _config_role["role"]:
                 _config_role["users"].append(config_user["name"])

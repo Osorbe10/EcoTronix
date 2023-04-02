@@ -1,7 +1,10 @@
-from Common.constants import BLUE, CONFIG_FILE, CONFIG_PATH, DEFAULT, GREEN, PICO_PATH, PICO_SETUP_FILE, RED
+from Common.constants import BLUE, CONFIG_FILE, CONFIG_PATH, DEFAULT, GREEN, PERIPHERALS_FILE, PICO_CODES_PATH, PICO_CONFIG_FILE, PICO_CONFIG_TEMPLATE_FILE, PICO_PATH, PICO_SETUP_FILE, RED
 from Common.positions import get_position, position_format
 from Common.rooms import get_room, room_format
 from json import dump, load
+from os import remove
+from shutil import copy
+from socket import gethostname
 from subprocess import call
 
 """
@@ -107,13 +110,32 @@ def install_device(room, position):
     if config_device["installed"]:
         print(f"{RED}[{DEFAULT}-{RED}]{DEFAULT} {BLUE}Device already installed{DEFAULT}")
         return False
+    copy(PICO_PATH + PICO_CONFIG_TEMPLATE_FILE, PICO_CODES_PATH + PICO_CONFIG_FILE)
+    with open(PICO_CODES_PATH + PICO_CONFIG_FILE, "r+") as pico_config_file, open(PICO_PATH + PERIPHERALS_FILE, "r") as peripherals_config_file:
+        pico_config = load(pico_config_file)
+        pico_config["mqtt"]["server"] = gethostname()
+        pico_config["mqtt"]["room"] = config_room["room"]
+        pico_config["mqtt"]["position"] = config_position
+        peripherals_config = load(peripherals_config_file)
+        for peripheral in config_device["external_peripherals"]:
+            for config_peripheral in peripherals_config["external"]:
+                if peripheral == config_peripheral["type"]:
+                    pico_config["peripherals"]["external"].append(config_peripheral)
+        for config_peripheral in peripherals_config["internal"]:
+            pico_config["peripherals"]["internal"].append(config_peripheral)
+        pico_config_file.seek(0)
+        dump(pico_config, pico_config_file, indent=4)
     try:
-        if call([PICO_PATH + PICO_SETUP_FILE, config_room["room"], config_position]) != 0:
+        if call([PICO_PATH + PICO_SETUP_FILE]) != 0:
             print(f"{RED}[{DEFAULT}-{RED}]{DEFAULT} {BLUE}Device installation failed{DEFAULT}")
             return False
     except KeyboardInterrupt:
         print(f"{RED}[{DEFAULT}-{RED}]{DEFAULT} {BLUE}Device installation cancelled{DEFAULT}")
         return False
+    try:
+        remove(PICO_CODES_PATH + PICO_CONFIG_FILE)
+    except OSError:
+        pass
     with open(CONFIG_PATH + CONFIG_FILE, "r+") as config_file:
         config = load(config_file)
         for _config_room in config["rooms"]:

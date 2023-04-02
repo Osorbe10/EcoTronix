@@ -143,7 +143,9 @@ function install_language_packages {
     fi
     if ! [[ -f "${languages_path}/${languages[0]}/${languages[0]}.list" ]]; then
         touch ${languages_path}/${languages[0]}/${languages[0]}.list
-        jq --arg language "${languages[0]}" --arg default true --arg hmm "${language_files[0,${hmm_row}]}" --arg dic "${language_files[0,${dic_row}]}" --arg kws "${language_files[0,${kws_row}]}" '.languages += [{"language": $language, "default": ($default | fromjson), "hmm": $hmm, "dic": $dic, "kws": $kws}]' config.json > tmp.json && mv tmp.json config.json
+        jq --arg language "${languages[0]}" --arg hmm "${language_files[0,${hmm_row}]}" --arg dic "${language_files[0,${dic_row}]}" --arg kws "${language_files[0,${kws_row}]}" '.languages += [{"language": $language, "hmm": $hmm, "dic": $dic, "kws": $kws}]' config.json > tmp.json && mv tmp.json config.json
+        chown $SUDO_USER:$SUDO_USER config.json
+        jq --arg language "${languages[0]}" '.general.default_language = $language' config.json > tmp.json && mv tmp.json config.json
         chown $SUDO_USER:$SUDO_USER config.json
     fi
     echo -ne "${YELLOW}Available speech recognition language (X = installed): ${DEFAULT}\n"
@@ -163,7 +165,7 @@ function install_language_packages {
                 install_es-es_language ${languages_path} ${languages[${i}]}
             fi
             touch ${languages_path}/${languages[${i}]}/${languages[${i}]}.list
-            jq --arg language "${languages[${i}]}" --arg default false --arg hmm "${language_files[${i},${hmm_row}]}" --arg dic "${language_files[${i},${dic_row}]}" --arg kws "${language_files[${i},${kws_row}]}" '.languages += [{"language": $language, "default": ($default | fromjson), "hmm": $hmm, "dic": $dic, "kws": $kws}]' config.json > tmp.json && mv tmp.json config.json
+            jq --arg language "${languages[${i}]}" --arg hmm "${language_files[${i},${hmm_row}]}" --arg dic "${language_files[${i},${dic_row}]}" --arg kws "${language_files[${i},${kws_row}]}" '.languages += [{"language": $language, "hmm": $hmm, "dic": $dic, "kws": $kws}]' config.json > tmp.json && mv tmp.json config.json
             chown $SUDO_USER:$SUDO_USER config.json
             echo -ne "${GREEN}[${DEFAULT}+${GREEN}]${DEFAULT} ${BLUE}${languages[${i}]} is now installed${DEFAULT}\n"
         fi

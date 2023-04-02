@@ -139,7 +139,7 @@ def main_initialize():
     from umqtt.simple import MQTTClient
     with open("config.json") as config_file:
         config = load(config_file)
-        wifi_connect(config["wifi"]["ssid"], config["wifi"]["pass"])
+        wifi_connect(config["wifi"]["ssid"], config["wifi"]["password"])
         client_id = config["mqtt"]["room"].lower().replace(" ", "_") + "/" + config["mqtt"]["position"].lower().replace(" ", "_")
         client = MQTTClient(client_id, config["mqtt"]["server"])
         client.set_callback(callback)

@@ -1,5 +1,7 @@
 CONFIG_FILE = "config.json"
 PERIPHERALS_FILE = "peripherals.json"
+PICO_CONFIG_FILE = "config.json"
+PICO_CONFIG_TEMPLATE_FILE = "config_template.json"
 PICO_SETUP_FILE = "setup.sh"
 
 CONFIG_PATH = "./"
@@ -7,14 +9,13 @@ FACES_PATH = CONFIG_PATH + "Faces/"
 ENCODED_FACES_PATH = FACES_PATH + "Encoded/"
 LANGUAGES_PATH = CONFIG_PATH + "Languages/"
 PICO_PATH = CONFIG_PATH + "Pico/"
+PICO_CODES_PATH = PICO_PATH + "Codes/"
 
 FACES_EXTENSION = ".jpg"
 ENCODED_FACES_EXTENSION = ".npy"
 
 DATE_FORMAT = "%d-%m-%Y"
 LANGUAGE_FORMAT = "^[a-z]{2}-[a-z]{2}$"
-
-LEGAL_AGE = 18
 
 COMMAND_TIMEOUT = 10
 
