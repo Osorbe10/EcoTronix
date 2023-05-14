@@ -70,6 +70,7 @@ def assign_external_peripheral(peripheral, room, position):
                 for _config_device in _config_room["devices"]:
                     if config_position == _config_device["position"]:
                         _config_device["external_peripherals"].append(config_peripheral["type"])
+                        _config_device["installed"] = False
         config_file.seek(0)
         dump(config, config_file, indent=4)
     print(f"{GREEN}[{DEFAULT}+{GREEN}]{DEFAULT} {BLUE}Peripheral assigned to device{DEFAULT}")
@@ -112,6 +113,7 @@ def deassign_external_peripheral(peripheral, room, position):
                 for _config_device in _config_room["devices"]:
                     if config_position == _config_device["position"]:
                         _config_device["external_peripherals"].remove(config_peripheral["type"])
+                        _config_device["installed"] = False
         config_file.seek(0)
         dump(config, config_file, indent=4)
         config_file.truncate()

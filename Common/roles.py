@@ -55,6 +55,43 @@ def create_role(role, age_restriction, privileged):
     return True
 
 """
+Edits a role.
+@param old_role: Old role
+@param new_role: New role
+@param new_age_restriction: True if role has age restriction. False if not
+@param new_privileged: True if role is privileged. False if not
+@returns: True if the role was edited. False if both roles are incomplete or incorrect or old role is not existing or new role is existing or role has no changes
+"""
+
+def edit_role(old_role, new_role, new_age_restriction, new_privileged):
+    if not role_format(old_role) or not role_format(new_role):
+        return False
+    config_role = get_role(new_role)
+    if config_role and old_role.strip().lower() != new_role.strip().lower():
+        print(f"{RED}[{DEFAULT}-{RED}]{DEFAULT} {BLUE}Existing new role{DEFAULT}")
+        return False
+    config_role = get_role(old_role)
+    if not config_role:
+        print(f"{RED}[{DEFAULT}-{RED}]{DEFAULT} {BLUE}Non existing old role{DEFAULT}")
+        return False
+    if config_role["role"] == new_role.strip().capitalize() and config_role["age_restriction"] == new_age_restriction and config_role["privileged"] == new_privileged:
+        print(f"{RED}[{DEFAULT}-{RED}]{DEFAULT} {BLUE}Role has no changes{DEFAULT}")
+        return False
+    with open(CONFIG_PATH + CONFIG_FILE, "r+") as config_file:
+        config = load(config_file)
+        for _config_role in config["roles"]:
+            if config_role["role"] == _config_role["role"]:
+                _config_role["role"] = new_role.strip().capitalize()
+                _config_role["age_restriction"] = new_age_restriction
+                _config_role["privileged"] = new_privileged
+                break
+        config_file.seek(0)
+        dump(config, config_file, indent=4)
+        config_file.truncate()
+    print(f"{GREEN}[{DEFAULT}+{GREEN}]{DEFAULT} {BLUE}Role edited{DEFAULT}")
+    return True
+
+"""
 Removes a role.
 @param role: Role
 @returns: True if the role was removed. False if role is incomplete or incorrect or role is not existing

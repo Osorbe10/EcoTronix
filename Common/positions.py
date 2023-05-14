@@ -52,6 +52,47 @@ def create_position(position):
     return True
 
 """
+Edits a position.
+@param old_position: Old position
+@param new_position: New position
+@returns: True if the position was edited. False if both positions are incomplete or incorrect or old position is not existing or new position is existing or position has no changes
+"""
+
+def edit_position(old_position, new_position):
+    if not position_format(old_position) or not position_format(new_position):
+        return False
+    config_position = get_position(new_position)
+    if config_position:
+        print(f"{RED}[{DEFAULT}-{RED}]{DEFAULT} {BLUE}Existing new position{DEFAULT}")
+        return False
+    config_position = get_position(old_position)
+    if not config_position:
+        print(f"{RED}[{DEFAULT}-{RED}]{DEFAULT} {BLUE}Non existing old position{DEFAULT}")
+        return False
+    if config_position == new_position.strip().capitalize():
+        print(f"{RED}[{DEFAULT}-{RED}]{DEFAULT} {BLUE}Position has no changes{DEFAULT}")
+        return False
+    with open(CONFIG_PATH + CONFIG_FILE, "r+") as config_file:
+        config = load(config_file)
+        for index in range(len(config["positions"])):
+            if config_position == config["positions"][index]:
+                config["positions"][index] = new_position.strip().capitalize()
+                break
+        for config_room in config["rooms"]:
+            for config_device in config_room["devices"]:
+                if config_position == config_device["position"]:
+                    config_device["position"] = new_position.strip().capitalize()
+                    config_device["installed"] = False
+        for config_command in config["commands"]["remote"]:
+            if config_position == config_command["position"]:
+                config_command["position"] = new_position.strip().capitalize()
+        config_file.seek(0)
+        dump(config, config_file, indent=4)
+        config_file.truncate()
+    print(f"{GREEN}[{DEFAULT}+{GREEN}]{DEFAULT} {BLUE}Position edited{DEFAULT}")
+    return True
+
+"""
 Removes a position.
 @param position: Position
 @returns: True if the position was removed. False if position is incomplete or incorrect or position is not existing

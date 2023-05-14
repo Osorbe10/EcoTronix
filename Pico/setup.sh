@@ -8,6 +8,10 @@ YELLOW="\e[1;33m"
 BLUE="\e[1;34m"
 DEFAULT="\e[0m"
 
+# Pico directory
+
+DIR=$(dirname "$(readlink -f "$0")")
+
 # Trap CTRL + C
 
 function control_c {
@@ -26,21 +30,21 @@ if ! [[ -d "${pico_path}" ]]; then
         :
     done
 fi
-ls /dev/tty* > Pico/old.tmp
+ls /dev/tty* > ${DIR}/old.tmp
 echo -ne "${YELLOW}[${DEFAULT}*${YELLOW}]${DEFAULT} ${BLUE}Installing Micropython firmware...${DEFAULT}\n"
-sudo cp Pico/micropython.uf2 ${pico_path}
+sudo cp ${DIR}/micropython.uf2 ${pico_path}
 echo -ne "${GREEN}[${DEFAULT}+${GREEN}]${DEFAULT} ${BLUE}Micropython firmware installed${DEFAULT}\n"
-ls /dev/tty* > Pico/new.tmp
-while [[ "$(diff "Pico/old.tmp" "Pico/new.tmp")" == "" ]]; do
-    ls /dev/tty* > Pico/new.tmp
+ls /dev/tty* > ${DIR}/new.tmp
+while [[ "$(diff "${DIR}/old.tmp" "${DIR}/new.tmp")" == "" ]]; do
+    ls /dev/tty* > ${DIR}/new.tmp
 done
-tty=$(diff Pico/old.tmp Pico/new.tmp | tail -n 1 | cut -d " " -f 2)
-rm Pico/old.tmp Pico/new.tmp
+tty=$(diff ${DIR}/old.tmp ${DIR}/new.tmp | tail -n 1 | cut -d " " -f 2)
+rm ${DIR}/old.tmp ${DIR}/new.tmp
 echo -ne "${YELLOW}[${DEFAULT}*${YELLOW}]${DEFAULT} ${BLUE}Copying codes...${DEFAULT}\n"
 rshell --buffer-size 512 -p ${tty} rm -r /pyboard/* >/dev/null 2>&1
-rshell --buffer-size 512 -p ${tty} cp Pico/Codes/main.py /pyboard >/dev/null 2>&1
-rshell --buffer-size 512 -p ${tty} cp Pico/Codes/config.json /pyboard >/dev/null 2>&1
-rshell --buffer-size 512 -p ${tty} cp -r Pico/Codes/umqtt /pyboard >/dev/null 2>&1
+rshell --buffer-size 512 -p ${tty} cp ${DIR}/Codes/main.py /pyboard >/dev/null 2>&1
+rshell --buffer-size 512 -p ${tty} cp ${DIR}/Codes/config.json /pyboard >/dev/null 2>&1
+rshell --buffer-size 512 -p ${tty} cp -r ${DIR}/Codes/umqtt /pyboard >/dev/null 2>&1
 echo -ne "${GREEN}[${DEFAULT}+${GREEN}]${DEFAULT} ${BLUE}Codes copied${DEFAULT}\n"
 
 exit 0

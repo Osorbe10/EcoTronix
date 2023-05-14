@@ -293,7 +293,7 @@ def remove_local_command(command):
         config_file.seek(0)
         dump(config, config_file, indent=4)
         config_file.truncate()
-    #remove_phrases_from_kws_file(language, phrases)
+    #remove_phrases_from_kws_file(language, phrases) for all languages
     print(f"{GREEN}[{DEFAULT}+{GREEN}]{DEFAULT} {BLUE}Local command removed{DEFAULT}")
     return True
 
@@ -320,13 +320,13 @@ def remove_remote_command(peripheral, subtype, action, room, position):
         config_file.seek(0)
         dump(config, config_file, indent=4)
         config_file.truncate()
-    #remove_phrases_from_kws_file(language, phrases)
+    #remove_phrases_from_kws_file(language, phrases) for all languages
     print(f"{GREEN}[{DEFAULT}+{GREEN}]{DEFAULT} {BLUE}Remote command removed{DEFAULT}")
     return True
 
 """
 Gets existing local commands.
-@returns: A dictionary with description, privileged or not and age restriction or not for each local command. False if there are no local commands
+@returns: A dictionary with command, description, privileged or not and age restriction or not for each local command. False if there are no local commands
 """
 
 def get_local_commands():
@@ -334,11 +334,11 @@ def get_local_commands():
         config = load(config_file)
         if len(config["commands"]["local"]) == 0:
             return False
-        return [{"description": config_command["description"], "privileged": config_command["privileged"], "age_restriction": config_command["age_restriction"]} for config_command in config["commands"]["local"]]
+        return [{"command": config_command["command"], "description": config_command["description"], "privileged": config_command["privileged"], "age_restriction": config_command["age_restriction"]} for config_command in config["commands"]["local"]]
 
 """
 Gets existing remote commands.
-@returns: A dictionary with description, privileged or not and age restriction or not for each remote command. False if there are no remote commands
+@returns: A dictionary with room, position, peripheral, subtype, action, description, privileged or not and age restriction or not for each remote command. False if there are no remote commands
 """
 
 def get_remote_commands():
@@ -346,4 +346,140 @@ def get_remote_commands():
         config = load(config_file)
         if len(config["commands"]["remote"]) == 0:
             return False
-        return [{"description": config_command["description"], "privileged": config_command["privileged"], "age_restriction": config_command["age_restriction"]} for config_command in config["commands"]["remote"]]
+        return [{"room": config_command["room"], "position": config_command["position"], "peripheral": config_command["peripheral"], "subtype": config_command["subtype"], "action": config_command["action"], "description": config_command["description"], "privileged": config_command["privileged"], "age_restriction": config_command["age_restriction"]} for config_command in config["commands"]["remote"]]
+
+"""
+Edits a local command.
+@param old_command: Old local command
+@param new_command: New local command
+@param new_description: New command's description
+@param new_age_restriction: True if command has age_restriction. False if not
+@param new_privileged: True if command is privileged. False if not
+@param new_response: New response
+@param new_phrases: New phrases
+@param new_language: New language
+@returns: True if the local command was edited. False if both commands are incomplete or description, response or phrases are incomplete or incorrect or old command is not existing or new command is existing or command has no changes
+"""
+
+def edit_local_command(old_command, new_command, new_description, new_age_restriction, new_privileged, new_response, new_phrases, new_language):
+    if not command_format(old_command) or not command_format(new_command) or not description_format(new_description) or not response_format(new_response) or not phrases_format(new_phrases):
+        return False
+    config_command = get_local_command(new_command)
+    if config_command and old_command.strip().lower() != new_command.strip().lower():
+        print(f"{RED}[{DEFAULT}-{RED}]{DEFAULT} {BLUE}Existing new local command{DEFAULT}")
+        return False
+    config_command = get_local_command(old_command)
+    if not config_command:
+        print(f"{RED}[{DEFAULT}-{RED}]{DEFAULT} {BLUE}Non existing old local command{DEFAULT}")
+        return False
+    if config_command["command"] == new_command.strip() and config_command["description"] == new_description.strip() and config_command["age_restriction"] == new_age_restriction and config_command["privileged"] == new_privileged:
+        for config_phrase in config_command["phrases"]:
+            if new_language.strip().lower() == config_phrase["language"]:
+                if config_phrase["response"] == new_response.strip():
+                    same_phrases = True
+                    for phrase in compile(r"[\n\r]+").split(new_phrases.strip().lower()):
+                        if phrase not in config_phrase["phrases"]:
+                            same_phrases = False
+                            break
+                    if same_phrases:
+                        print(f"{RED}[{DEFAULT}-{RED}]{DEFAULT} {BLUE}Local command has no changes{DEFAULT}")
+                        return False
+                break
+    with open(CONFIG_PATH + CONFIG_FILE, "r+") as config_file:
+        config = load(config_file)
+        for _config_command in config["commands"]["local"]:
+            if config_command["command"] == _config_command["command"]:
+                _config_command["command"] = new_command.strip()
+                _config_command["description"] = new_description.strip()
+                _config_command["age_restriction"] = new_age_restriction
+                _config_command["privileged"] = new_privileged
+                new_phrase = manage_new_phrase(new_language, new_phrases, new_response)
+                is_new_language = True
+                for _config_phrase in _config_command["phrases"]:
+                    if new_language.strip().lower() == _config_phrase["language"]:
+                        _config_phrase["response"] = new_phrase["response"]
+                        _config_phrase["phrases"] = new_phrase["phrases"]
+                        is_new_language = False
+                        break
+                if is_new_language:
+                    _config_command["phrases"].append(new_phrase)
+                break
+        config_file.seek(0)
+        dump(config, config_file, indent=4)
+        config_file.truncate()
+    print(f"{GREEN}[{DEFAULT}+{GREEN}]{DEFAULT} {BLUE}Local command edited{DEFAULT}")
+    return True
+
+"""
+Edits a remote command.
+@param old_peripheral: Old peripheral
+@param old_subtype: Old subtype
+@param old_action: Old action
+@param old_room: Old room
+@param old_position: Old position
+@param new_peripheral: New peripheral
+@param new_subtype: New subtype
+@param new_action: New action
+@param new_room: New room
+@param new_position: New position
+@param new_description: New command's description
+@param new_age_restriction: True if command has age_restriction. False if not
+@param new_privileged: True if command is privileged. False if not
+@param new_response: New response
+@param new_phrases: New phrases
+@param new_language: New language
+@returns: True if the remote command was edited. False if both commands are incomplete or description, response or phrases are incomplete or incorrect or old command is not existing or new command is existing or command has no changes
+"""
+
+def edit_remote_command(old_peripheral, old_subtype, old_action, old_room, old_position, new_peripheral, new_subtype, new_action, new_room, new_position, new_description, new_age_restriction, new_privileged, new_response, new_phrases, new_language):
+    if not peripheral_format(old_peripheral) or not room_format(old_room) or not position_format(old_position) or not peripheral_format(new_peripheral) or not room_format(new_room) or not position_format(new_position) or not description_format(new_description) or not response_format(new_response) or not phrases_format(new_phrases):
+        return False
+    config_command = get_remote_command(new_peripheral, new_subtype, new_action, new_room, new_position)
+    if config_command and (old_peripheral.strip().lower() != new_peripheral.strip().lower() or old_subtype.strip().lower() != new_subtype.strip().lower() or old_action.strip().lower() != new_action.strip().lower() or old_room.strip().lower() != new_room.strip().lower() or old_position.strip().lower() != new_position.strip().lower()):
+        print(f"{RED}[{DEFAULT}-{RED}]{DEFAULT} {BLUE}Existing new remote command{DEFAULT}")
+        return False
+    config_command = get_remote_command(old_peripheral, old_subtype, old_action, old_room, old_position)
+    if not config_command:
+        print(f"{RED}[{DEFAULT}-{RED}]{DEFAULT} {BLUE}Non existing old remote command{DEFAULT}")
+        return False
+    if config_command["peripheral"] == new_peripheral.strip() and config_command["subtype"] == new_subtype.strip() and config_command["action"] == new_action.strip() and config_command["room"] == new_room.strip() and config_command["position"] == new_position.strip() and config_command["description"] == new_description.strip() and config_command["age_restriction"] == new_age_restriction and config_command["privileged"] == new_privileged:
+        for config_phrase in config_command["phrases"]:
+            if new_language.strip().lower() == config_phrase["language"]:
+                if config_phrase["response"] == new_response.strip():
+                    same_phrases = True
+                    for phrase in compile(r"[\n\r]+").split(new_phrases.strip().lower()):
+                        if phrase not in config_phrase["phrases"]:
+                            same_phrases = False
+                            break
+                    if same_phrases:
+                        print(f"{RED}[{DEFAULT}-{RED}]{DEFAULT} {BLUE}Remote command has no changes{DEFAULT}")
+                        return False
+                break
+    with open(CONFIG_PATH + CONFIG_FILE, "r+") as config_file:
+        config = load(config_file)
+        for _config_command in config["commands"]["remote"]:
+            if config_command["peripheral"] == _config_command["peripheral"] and config_command["subtype"] == _config_command["subtype"] and config_command["action"] == _config_command["action"] and config_command["room"] == _config_command["room"] and config_command["position"] == _config_command["position"]:
+                _config_command["peripheral"] = new_peripheral.strip()
+                _config_command["subtype"] = new_subtype.strip()
+                _config_command["action"] = new_action.strip()
+                _config_command["room"] = new_room.strip()
+                _config_command["position"] = new_position.strip()
+                _config_command["description"] = new_description.strip()
+                _config_command["age_restriction"] = new_age_restriction
+                _config_command["privileged"] = new_privileged
+                new_phrase = manage_new_phrase(new_language, new_phrases, new_response)
+                is_new_language = True
+                for _config_phrase in _config_command["phrases"]:
+                    if new_language.strip().lower() == _config_phrase["language"]:
+                        _config_phrase["response"] = new_phrase["response"]
+                        _config_phrase["phrases"] = new_phrase["phrases"]
+                        is_new_language = False
+                        break
+                if is_new_language:
+                    _config_command["phrases"].append(new_phrase)
+                break
+        config_file.seek(0)
+        dump(config, config_file, indent=4)
+        config_file.truncate()
+    print(f"{GREEN}[{DEFAULT}+{GREEN}]{DEFAULT} {BLUE}Remote command edited{DEFAULT}")
+    return True

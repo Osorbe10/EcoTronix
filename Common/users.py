@@ -119,6 +119,81 @@ def create_user(name, birth_date):
     return True
 
 """
+Edits a user.
+@param old_name: Old name
+@param new_name: New name
+@param new_birth_date: New birth date
+@returns: True if the user was edited. False if both names or birth date are incomplete or incorrect or old user is not existing or new user is existing or user has no changes
+"""
+
+def edit_user(old_name, new_name, new_birth_date):
+    if not name_format(old_name) or not name_format(new_name) or not birth_date_format(new_birth_date):
+        return False
+    config_user = get_user(new_name)
+    if config_user and old_name.strip().lower() != new_name.strip().lower():
+        print(f"{RED}[{DEFAULT}-{RED}]{DEFAULT} {BLUE}Existing new user{DEFAULT}")
+        return False
+    config_user = get_user(old_name)
+    if not config_user:
+        print(f"{RED}[{DEFAULT}-{RED}]{DEFAULT} {BLUE}Non existing old user{DEFAULT}")
+        return False
+    if config_user["name"] == new_name.strip().capitalize() and config_user["birth_date"] == new_birth_date.strip():
+        print(f"{RED}[{DEFAULT}-{RED}]{DEFAULT} {BLUE}User has no changes{DEFAULT}")
+        return False
+    with open(CONFIG_PATH + CONFIG_FILE, "r+") as config_file:
+        config = load(config_file)
+        for _config_user in config["users"]:
+            if config_user["name"] == _config_user["name"]:
+                _config_user["name"] = new_name.strip().capitalize()
+                _config_user["birth_date"] = new_birth_date.strip()
+                break
+        for _config_role in config["roles"]:
+            if config_user["name"] in _config_role["users"]:
+                _config_role["users"][_config_role["users"].index(config_user["name"])] = new_name.strip().capitalize()
+        config_file.seek(0)
+        dump(config, config_file, indent=4)
+        config_file.truncate()
+    print(f"{GREEN}[{DEFAULT}+{GREEN}]{DEFAULT} {BLUE}User edited{DEFAULT}")
+    return True
+
+"""
+Edits a user face.
+@param name: Name
+@returns: True if the user face was edited. False if name is incomplete or incorrect or user is not existing or photo could not be stored or face could not be detected
+"""
+
+def edit_user_face(name):
+    if not name_format(name):
+        return False
+    config_user = get_user(name)
+    if not config_user:
+        print(f"{RED}[{DEFAULT}-{RED}]{DEFAULT} {BLUE}Non existing user{DEFAULT}")
+        return False
+    timestamp = store_photo()
+    if not timestamp:
+        return False
+    try:
+        face_encoding = face_encodings(load_image_file(FACES_PATH + timestamp + FACES_EXTENSION))[0]
+    except IndexError:
+        print(f"{RED}[{DEFAULT}-{RED}]{DEFAULT} {BLUE}Face could not be detected{DEFAULT}")
+        try:
+            remove(FACES_PATH + timestamp + FACES_EXTENSION)
+        except OSError:
+            pass
+        return False
+    save(ENCODED_FACES_PATH + timestamp + ENCODED_FACES_EXTENSION, face_encoding)
+    with open(CONFIG_PATH + CONFIG_FILE, "r+") as config_file:
+        config = load(config_file)
+        for _config_user in config["users"]:
+            if config_user["name"] == _config_user["name"]:
+                _config_user["face"] = timestamp.strip()
+                break
+        config_file.seek(0)
+        dump(config, config_file, indent=4)
+    print(f"{GREEN}[{DEFAULT}+{GREEN}]{DEFAULT} {BLUE}User face edited{DEFAULT}")
+    return True
+
+"""
 Removes a user.
 @param name: Name
 @returns: True if the user was removed. False if name is incomplete or incorrect or user is not existing

@@ -1,10 +1,12 @@
+from os import path
+
 CONFIG_FILE = "config.json"
 PERIPHERALS_FILE = "peripherals.json"
 PICO_CONFIG_FILE = "config.json"
 PICO_CONFIG_TEMPLATE_FILE = "config_template.json"
 PICO_SETUP_FILE = "setup.sh"
 
-CONFIG_PATH = "./"
+CONFIG_PATH = path.dirname(path.abspath(__file__)) + "/../"
 FACES_PATH = CONFIG_PATH + "Faces/"
 ENCODED_FACES_PATH = FACES_PATH + "Encoded/"
 LANGUAGES_PATH = CONFIG_PATH + "Languages/"
