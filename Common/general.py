@@ -75,3 +75,23 @@ def set_wifi_credentials(wifi_ssid, wifi_password):
         pico_config_file.truncate()
     print(f"{GREEN}[{DEFAULT}+{GREEN}]{DEFAULT} {BLUE}Wifi credentials set{DEFAULT}")
     return True
+
+"""
+Gets MQTT user.
+@returns: MQTT user
+"""
+
+def get_mqtt_user():
+    with open(PICO_PATH + PICO_CONFIG_TEMPLATE_FILE, "r") as pico_config_file:
+        config = load(pico_config_file)
+        return config["mqtt"]["user"]
+    
+"""
+Gets MQTT password.
+@returns: MQTT password
+"""
+
+def get_mqtt_password():
+    with open(PICO_PATH + PICO_CONFIG_TEMPLATE_FILE, "r") as pico_config_file:
+        config = load(pico_config_file)
+        return config["mqtt"]["password"]

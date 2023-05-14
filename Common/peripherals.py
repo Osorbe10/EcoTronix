@@ -128,7 +128,7 @@ def get_internal_peripherals():
         config = load(config_file)
         if len(config["internal"]) == 0:
             return False
-        return [{"type": config_peripheral["type"], "sensor": config_peripheral["sensor"], "actuator": config_peripheral["actuator"]} for config_peripheral in config["internal"]]
+        return [{"type": config_peripheral["type"], "actions": config_peripheral["actions"]} for config_peripheral in config["internal"]]
 
 """
 Gets existing external peripherals.
@@ -140,7 +140,7 @@ def get_external_peripherals():
         config = load(config_file)
         if len(config["external"]) == 0:
             return False
-        return [{"type": config_peripheral["type"], "sensor": config_peripheral["sensor"], "actuator": config_peripheral["actuator"]} for config_peripheral in config["external"]]
+        return [{"type": config_peripheral["type"], "actions": config_peripheral["actions"]} for config_peripheral in config["external"]]
 
 """
 Gets device peripherals.

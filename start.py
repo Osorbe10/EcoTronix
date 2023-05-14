@@ -4,7 +4,9 @@ from chime import info, success, warning
 from Common.commands import get_command
 from Common.constants import BLUE, COMMAND_TIMEOUT, DEFAULT, ENCODED_FACES_EXTENSION, ENCODED_FACES_PATH, GREEN, LANGUAGES_PATH, RED, YELLOW
 from Common.devices import get_devices
+from Common.general import get_mqtt_user, get_mqtt_password
 from Common.languages import get_default_language, get_default_language_paths
+from Common.peripherals import get_device_peripherals, get_peripheral_actions, get_peripheral_subtypes
 from Common.users import get_users
 from contextlib import contextmanager
 from cv2 import CAP_V4L2, resize, VideoCapture
@@ -151,6 +153,9 @@ Launch desired action if is allowed.
 
 def action(phrase, language):
     config_command = get_command(phrase, language)
+    if not config_command:
+        print(f"{RED}[{DEFAULT}-{RED}]{DEFAULT} {BLUE}Unexpected phrase recognized{DEFAULT}")
+        return
     if permissions(config_command):
         info()
         execute(config_command, language)
@@ -233,6 +238,34 @@ def face_recognition(stop):
     camera.release()
 
 """
+Prints sensor value when requested.
+"""
+
+def on_message(client, userdata, message):
+    print(f"{message.topic}: {message.payload.decode()}")
+
+"""
+Subscribes to installed devices peripherals with any sensor function.
+@param client: MQTT client
+"""
+
+def subscribing(client):
+    for device in get_devices():
+        if device["installed"]:
+            device_path = path.join(device["room"].lower().replace(" ", "_"), device["position"].lower().replace(" ", "_"))
+            for peripheral in get_device_peripherals(device["room"], device["position"]):
+                if "get" in get_peripheral_actions(peripheral):
+                    peripheral_path = path.join(device_path, peripheral.lower().replace(" ", "_"))
+                    subtypes = get_peripheral_subtypes(peripheral)
+                    if subtypes:
+                        for subtype in subtypes:
+                            client.subscribe(path.join(peripheral_path, subtype.lower().replace(" ", "_"), "get"), qos=1)
+                            print(f"{YELLOW}[{DEFAULT}*{YELLOW}]{DEFAULT} {BLUE}Suscribed to " + path.join(peripheral_path, subtype.lower().replace(" ", "_"), "get") + f"{DEFAULT}")
+                    else:
+                        client.subscribe(path.join(peripheral_path, "get"), qos=1)
+                        print(f"{YELLOW}[{DEFAULT}*{YELLOW}]{DEFAULT} {BLUE}Suscribed to " + path.join(peripheral_path, "get") + f"{DEFAULT}")
+
+"""
 Connects to MQTT broker.
 @param client: MQTT client
 @returns: True if MQTT client is connected. False if not
@@ -240,14 +273,14 @@ Connects to MQTT broker.
 
 def start_mqtt():
     global client
-    client = Client(protocol=MQTTv5)
+    client = Client(gethostname(), protocol=MQTTv5)
     try:   
-        client.connect(gethostname())
+        client.username_pw_set(get_mqtt_user(), get_mqtt_password())
+        client.connect("127.0.0.1", 1883)
     except ConnectionRefusedError:
         return False
-    for device in get_devices():
-        if device["installed"]:
-            client.subscribe(path.join(device["room"].lower().replace(" ", "_"), device["position"].lower().replace(" ", "_"), "#"), qos=1)
+    client.on_message = on_message
+    subscribing(client)
     client.loop_start()
     return True
 

@@ -2,19 +2,19 @@
     "external": [
         {
             "type": "BerryClip Buzzer",
-            "sensor": false,
-            "actuator": true,
+            "actions": [
+                "sound"
+            ],
             "pins": [
                 4
             ]
         },
         {
             "type": "BerryClip Led",
-            "sensor": false,
-            "actuator": true,
             "actions": [
                 "on",
-                "off"
+                "off",
+                "get"
             ],
             "subtypes": [
                 {
@@ -44,17 +44,17 @@
     "internal": [
         {
             "type": "Integrated Led",
-            "sensor": true,
-            "actuator": true,
             "actions": [
                 "on",
-                "off"
+                "off",
+                "get"
             ]
         },
         {
             "type": "Internal Temperature",
-            "sensor": true,
-            "actuator": false
+            "actions": [
+                "get"
+            ]
         }
     ]
 }

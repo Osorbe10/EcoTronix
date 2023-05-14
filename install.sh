@@ -8,6 +8,10 @@ YELLOW="\e[1;33m"
 BLUE="\e[1;34m"
 DEFAULT="\e[0m"
 
+# Root directory
+
+DIR=$(dirname "$(readlink -f "$0")")
+
 # Trap CTRL + C
 
 function control_c {
@@ -41,7 +45,7 @@ fi
 # APT dependencies
 
 function install_apt_dependencies {
-    apt_dependencies=(espeak jq libatlas-base-dev mosquitto python3.9 python3-opencv python3-pip python3-tk tar)
+    apt_dependencies=(espeak jq libatlas-base-dev mosquitto python3.9 python3-opencv python3-pip python3-tk tar wget)
     for dependence in ${apt_dependencies[@]}; do
         dpkg -s ${dependence} >/dev/null 2>&1
         if [[ $? -ne 0 ]]; then
@@ -136,17 +140,17 @@ function install_language_packages {
     language_files[1,${hmm_row}]="cmusphinx-es-5.2/model_parameters/voxforge_es_sphinx.cd_ptm_4000"
     language_files[1,${dic_row}]="es.dict"
     language_files[1,${kws_row}]="es-es.list"
-    languages_path="Languages"
+    languages_path=${DIR}/Languages
     if ! [[ -d ${languages_path} ]]; then
         mkdir ${languages_path}
         cp -r $(python3 -c "from pocketsphinx import get_model_path; print(get_model_path())")/${languages[0]} ${languages_path}/${languages[0]}
     fi
     if ! [[ -f "${languages_path}/${languages[0]}/${languages[0]}.list" ]]; then
         touch ${languages_path}/${languages[0]}/${languages[0]}.list
-        jq --arg language "${languages[0]}" --arg hmm "${language_files[0,${hmm_row}]}" --arg dic "${language_files[0,${dic_row}]}" --arg kws "${language_files[0,${kws_row}]}" '.languages += [{"language": $language, "hmm": $hmm, "dic": $dic, "kws": $kws}]' config.json > tmp.json && mv tmp.json config.json
-        chown $SUDO_USER:$SUDO_USER config.json
-        jq --arg language "${languages[0]}" '.general.default_language = $language' config.json > tmp.json && mv tmp.json config.json
-        chown $SUDO_USER:$SUDO_USER config.json
+        jq --arg language "${languages[0]}" --arg hmm "${language_files[0,${hmm_row}]}" --arg dic "${language_files[0,${dic_row}]}" --arg kws "${language_files[0,${kws_row}]}" '.languages += [{"language": $language, "hmm": $hmm, "dic": $dic, "kws": $kws}]' ${DIR}/config.json > tmp.json && mv tmp.json ${DIR}/config.json
+        chown $SUDO_USER:$SUDO_USER ${DIR}/config.json
+        jq --arg language "${languages[0]}" '.general.default_language = $language' ${DIR}/config.json > tmp.json && mv tmp.json ${DIR}/config.json
+        chown $SUDO_USER:$SUDO_USER ${DIR}/config.json
     fi
     echo -ne "${YELLOW}Available speech recognition language (X = installed): ${DEFAULT}\n"
     for (( i=0; i<${#languages[@]}; i++ )); do
@@ -165,8 +169,8 @@ function install_language_packages {
                 install_es-es_language ${languages_path} ${languages[${i}]}
             fi
             touch ${languages_path}/${languages[${i}]}/${languages[${i}]}.list
-            jq --arg language "${languages[${i}]}" --arg hmm "${language_files[${i},${hmm_row}]}" --arg dic "${language_files[${i},${dic_row}]}" --arg kws "${language_files[${i},${kws_row}]}" '.languages += [{"language": $language, "hmm": $hmm, "dic": $dic, "kws": $kws}]' config.json > tmp.json && mv tmp.json config.json
-            chown $SUDO_USER:$SUDO_USER config.json
+            jq --arg language "${languages[${i}]}" --arg hmm "${language_files[${i},${hmm_row}]}" --arg dic "${language_files[${i},${dic_row}]}" --arg kws "${language_files[${i},${kws_row}]}" '.languages += [{"language": $language, "hmm": $hmm, "dic": $dic, "kws": $kws}]' ${DIR}/config.json > tmp.json && mv tmp.json ${DIR}/config.json
+            chown $SUDO_USER:$SUDO_USER ${DIR}/config.json
             echo -ne "${GREEN}[${DEFAULT}+${GREEN}]${DEFAULT} ${BLUE}${languages[${i}]} is now installed${DEFAULT}\n"
         fi
     done
@@ -177,15 +181,37 @@ function install_language_packages {
 
 function pi_environment {
     echo -ne "${YELLOW}[${DEFAULT}*${YELLOW}]${DEFAULT} ${BLUE}Preparing Raspberry Pi environment...${DEFAULT}\n"
-    if ! [[ -d "Faces/Encoded" ]]; then
-        mkdir -p Faces/Encoded
-        chown -R $SUDO_USER:$SUDO_USER Faces
+    if ! [[ -d "${DIR}/Faces/Encoded" ]]; then
+        mkdir -p ${DIR}/Faces/Encoded
+        chown -R $SUDO_USER:$SUDO_USER ${DIR}/Faces
     fi
-    chmod +x config.py start.py Pico/setup.sh
+    chmod +x ${DIR}/config.py ${DIR}/start.py ${DIR}/Pico/setup.sh
     if ! [[ -f "/etc/mosquitto/conf.d/EcoTronix.conf" ]]; then
-        sudo touch /etc/mosquitto/conf.d/EcoTronix.conf
-        sudo echo "allow_anonymous true" > /etc/mosquitto/conf.d/EcoTronix.conf
-        sudo echo "listener 1883" >> /etc/mosquitto/conf.d/EcoTronix.conf
+
+        #openssl genrsa -out $(hostname)_CA.key 2048 >/dev/null 2>&1
+        #openssl req -new -x509 -days 3650 -key $(hostname)_CA.key -out $(hostname)_CA.crt -subj '/CN=$(hostname)' >/dev/null 2>&1
+        #openssl genrsa -out $(hostname)_MQTT-broker.key 2048 >/dev/null 2>&1
+        #openssl req -new -out $(hostname)_MQTT-broker.csr -key raspberrypi_MQTT-broker.key -subj '/CN=$(hostname)' >/dev/null 2>&1
+        #openssl x509 -req -days 3650 -in raspberrypi_MQTT-broker.csr -CA raspberrypi_CA.crt -CAkey raspberrypi_CA.key -CAcreateserial -out raspberrypi_MQTT-broker.crt >/dev/null 2>&1
+        #sudo mv raspberrypi_CA.crt /etc/mosquitto/ca_certificates/
+        #sudo mv raspberrypi_MQTT-broker.crt raspberrypi_MQTT-broker.key /etc/mosquitto/certs/
+        #sudo chmod 644 /etc/mosquitto/certs/raspberrypi_MQTT-broker.key
+        #sudo rm raspberrypi_*
+        #sudo echo "listener 8883" > /etc/mosquitto/conf.d/EcoTronix.conf
+        #sudo echo "cafile /etc/mosquitto/ca_certificates/$(hostname)_CA.crt" >> /etc/mosquitto/conf.d/EcoTronix.conf
+        #sudo echo "certfile /etc/mosquitto/certs/$(hostname)_MQTT-broker.crt" >> /etc/mosquitto/conf.d/EcoTronix.conf
+        #sudo echo "keyfile /etc/mosquitto/certs/$(hostname)_MQTT-broker.key" >> /etc/mosquitto/conf.d/EcoTronix.conf
+        #sudo echo "require_certificate true" >> /etc/mosquitto/conf.d/EcoTronix.conf
+        
+        mqtt_server=$(hostname)
+        mqtt_username="EcoTronix"
+        mqtt_password=$(openssl rand -base64 16)
+        jq --arg server "${mqtt_server}" --arg username "${mqtt_username}" --arg password "${mqtt_password}" '.mqtt.server = $server | .mqtt.user = $username | .mqtt.password = $password' ${DIR}/Pico/config_template.json > tmp.json && mv tmp.json ${DIR}/Pico/config_template.json
+        chown $SUDO_USER:$SUDO_USER ${DIR}/Pico/config_template.json
+        sudo mosquitto_passwd -b -c /etc/mosquitto/EcoTronix.pwfile EcoTronix ${mqtt_password}
+        sudo echo "listener 1883" > /etc/mosquitto/conf.d/EcoTronix.conf
+        sudo echo "allow_anonymous false" >> /etc/mosquitto/conf.d/EcoTronix.conf 
+        sudo echo "password_file /etc/mosquitto/EcoTronix.pwfile" >> /etc/mosquitto/conf.d/EcoTronix.conf
         sudo systemctl restart mosquitto.service
     fi
     echo -ne "${GREEN}[${DEFAULT}+${GREEN}]${DEFAULT} ${BLUE}Raspberry Pi environment prepared${DEFAULT}\n"
