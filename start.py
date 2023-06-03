@@ -7,7 +7,7 @@ from Common.devices import get_devices
 from Common.general import get_mqtt_user, get_mqtt_password
 from Common.languages import get_default_language, get_default_language_paths
 from Common.peripherals import get_device_peripherals, get_peripheral_actions, get_peripheral_subtypes
-from Common.users import get_users
+from Common.users import get_users, get_user_permissions
 from contextlib import contextmanager
 from cv2 import CAP_V4L2, resize, VideoCapture
 from face_recognition import compare_faces, face_distance, face_encodings, face_locations
@@ -135,6 +135,21 @@ def execute(config_command, language):
         print(f"{GREEN}[{DEFAULT}+{GREEN}]{DEFAULT} {BLUE}Executed: " + hierarchy + (" " + action if action else "") + f"{DEFAULT}")
 
 """
+Executes pending commands user is allowed to.
+@param name: User name
+"""
+
+def execute_pending(name):
+    permissions = get_user_permissions(name)
+    if permissions and (permissions["privileged"] or not permissions["age_restriction"]):
+            for index in range(pending_commands.len()):
+                pending_command = pending_commands.get(index - 1)
+                if user_allowed(pending_command[0]["age_restriction"], pending_command[0]["privileged"], permissions["age_restriction"], permissions["privileged"]):
+                    pending_commands.remove(index - 1)
+                    info()
+                    execute(pending_command[0], pending_command[1])
+
+"""
 Checks if a command is allowed.
 @param command: Command
 @returns: True if command is allowed. False if not
@@ -142,6 +157,20 @@ Checks if a command is allowed.
 
 def permissions(config_command):
     if not config_command["age_restriction"] and not config_command["privileged"]:
+        return True
+    return False
+
+"""
+Checks if a user is allowed to execute a command.
+@param command_age_restriction: Command age restriction
+@param command_privileged: Command privileged
+@param user_age_restriction: User age restriction
+@param user_privileged: User privileged
+@returns: True if user is allowed. False if not
+"""
+
+def user_allowed(command_age_restriction, command_privileged, user_age_restriction, user_privileged):
+    if (command_age_restriction and not user_age_restriction and not command_privileged) or (command_privileged and user_privileged and not command_age_restriction) or (command_age_restriction and not user_age_restriction and command_privileged and user_privileged):
         return True
     return False
 
@@ -226,14 +255,8 @@ def face_recognition(stop):
                         success()
                         print(f"{YELLOW}[{DEFAULT}*{YELLOW}]{DEFAULT} {BLUE}Loading {name} profile...{DEFAULT}")
                         last_user = name
-
                         # TODO: Launch every action associated with the user
-
-                    for index in range(pending_commands.len()):
-                        pending_command = pending_commands.get(index - 1)
-                        pending_commands.remove(index - 1)
-                        info()
-                        execute(pending_command[0], pending_command[1])
+                    execute_pending(name)
         process_frame = not process_frame
     camera.release()
 

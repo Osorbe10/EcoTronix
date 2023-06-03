@@ -258,3 +258,31 @@ def get_users():
         if len(config["users"]) == 0:
             return False
         return [{"name": config_user["name"], "age": age(config_user["birth_date"]), "face": config_user["face"]} for config_user in config["users"]]
+
+"""
+Gets user permissions depending on his roles.
+@param name: Name
+@returns: A dictionary with age restricion and privileged. False if name is incomplete or incorrect or user is not existing
+"""
+
+def get_user_permissions(name):
+    if not name_format(name):
+        return False
+    config_user = get_user(name)
+    if not config_user:
+        print(f"{RED}[{DEFAULT}-{RED}]{DEFAULT} {BLUE}Non existing user{DEFAULT}")
+        return False
+    age_restriction = False
+    privileged = False
+    with open(CONFIG_PATH + CONFIG_FILE, "r") as config_file:
+        config = load(config_file)
+        for config_role in config["roles"]:
+            for user in config_role["users"]:
+                if user == name:
+                    if config_role["age_restriction"]:
+                        age_restriction = True
+                    if config_role["privileged"]:
+                        privileged = True
+                    if age_restriction and privileged:
+                        break
+    return {"age_restriction": age_restriction, "privileged": privileged}
