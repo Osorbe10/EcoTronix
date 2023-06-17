@@ -802,7 +802,7 @@ class Config(Tk):
     """
 
     def gui_remove_local_command(self):
-        if remove_local_command(self.commands_command_entry.get()):
+        if remove_local_command(self.commands_command_selection):
             Config.gui_update_local_commands_list(self)
 
     """
@@ -857,7 +857,7 @@ class Config(Tk):
     """
 
     def gui_remove_remote_command(self):
-        if remove_remote_command(self.commands_peripheral_entry.get(), self.commands_subtype_entry.get(), self.commands_action_entry.get(), literal_eval(self.devices_device_entry.get())[0] if self.devices_device_entry.get() else self.devices_device_entry.get(), literal_eval(self.devices_device_entry.get())[1] if self.devices_device_entry.get() else self.devices_device_entry.get()):
+        if remove_remote_command(self.commands_peripheral_selection, self.commands_subtype_selection, self.commands_action_selection, self.commands_room_selection, self.commands_position_selection):
             Config.gui_update_remote_commands_list(self)
 
     """
